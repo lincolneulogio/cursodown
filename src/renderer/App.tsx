@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { NavSection, SessionUser } from "../../shared/udeler.d.ts";
+import type { NavSection, SessionUser } from "../shared/udeler.d.ts";
 import { BusyOverlay } from "./components/BusyOverlay";
 import { Sidebar } from "./components/Sidebar";
 import { getUdeler } from "./hooks/useUdeler";
