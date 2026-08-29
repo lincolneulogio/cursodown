@@ -81,25 +81,18 @@ npm run dev            # Vite HMR + Electron
 
 ## Releases e instaladores
 
-**Politica:** una sola version estable **`1.0.0`** / tag **`v1.0.0`**.
-No se crean `v1.0.1`, `v1.0.2`, etc. salvo que se pida explicitamente.
+**Politica:** una sola version estable **`1.0.2`** / tag **`v1.0.2`** (Latest).
+No se crean `v1.0.3`, `v1.0.4`, etc. ni drafts intermedios salvo que se pida.
 
-Los cambios (grandes o pequenos) se acumulan en `main` y, cuando se pida publicar,
-se actualiza el **mismo** tag `v1.0.0` y sus instaladores.
+Los cambios se acumulan en `main` y, al publicar, se actualiza el **mismo** tag `v1.0.2`.
 
 ### Auto-actualizacion
-La app compara un `buildId` interno (`app/build-info.json`, estampado en CI) con el del release `v1.0.0`.
-Asi puede actualizarse aunque la version visible siga siendo 1.0.0.
-
-Notas:
-- En desarrollo (`npm start`) los updates estan desactivados.
-- El release se sube primero como **draft** y se publica al terminar todos los OS (evita 404 de `latest.yml`).
-- Firma de codigo en Windows mejora la experiencia (opcional).
+La app compara un `buildId` interno (`app/build-info.json`) con el del release `v1.0.2`.
 
 ```bash
 # Cuando el usuario pida publicar la estable:
-git tag -f v1.0.0
-git push origin v1.0.0 --force
+git tag -f v1.0.2
+git push origin v1.0.2 --force
 ```
 
 | Plataforma | Paquetes |
@@ -108,7 +101,7 @@ git push origin v1.0.0 --force
 | macOS | DMG / ZIP (x64 y arm64) |
 | Linux | AppImage, deb, rpm |
 
-Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.0)
+Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.2)
 
 ## CI / CD
 

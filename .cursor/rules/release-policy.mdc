@@ -1,12 +1,13 @@
 ---
-description: Politica de versionado y releases de CursoDown (un solo tag estable)
+description: Politica de versionado y releases de CursoDown (un solo release estable)
 alwaysApply: true
 ---
 
 # Releases CursoDown
 
-- Version estable unica: **`1.0.0`** / tag **`v1.0.0`**.
-- **NO** subir `package.json` version ni crear tags `v1.0.1`, `v1.0.2`, etc. salvo que el usuario lo pida explicitamente.
+- Release estable actual: **`v1.0.2`** (Latest). Version en `package.json`: **`1.0.2`**.
+- **NO** crear tags/releases nuevos (`v1.0.3`, `v1.0.4`, …) ni drafts intermedios salvo que el usuario lo pida.
 - Commits a `main` estan bien; publicar instaladores solo cuando el usuario diga (release / publica / tag).
-- Al publicar: mover/actualizar el **mismo** tag `v1.0.0` (force) y regenerar artefactos en ese release.
-- El `buildId` en `app/build-info.json` (estampado en CI) permite auto-update aunque la version semver siga en 1.0.0.
+- Al publicar: actualizar el **mismo** tag estable (force) y regenerar artefactos en ese release; no abrir otro numero de version.
+- Evitar dejar releases en **Draft** a medias: o se completa Publish o se borra el draft.
+- El `buildId` en `app/build-info.json` (estampado en CI) permite auto-update al republicar el mismo tag.

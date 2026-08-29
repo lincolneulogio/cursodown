@@ -1,7 +1,7 @@
 {
   "name": "cursodown",
   "productName": "CursoDown",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Descargador de cursos de Udemy para escritorio.",
   "main": "main.js",
   "type": "commonjs",

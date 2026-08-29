@@ -1,8 +1,8 @@
 "use strict";
 
 /**
- * Auto-update for a single stable release (v1.0.0).
- * Semver stays 1.0.0; newer installs are detected via buildId in build-info.json.
+ * Auto-update for a single stable release (v1.0.2).
+ * Semver stays 1.0.2; newer installs are detected via buildId in build-info.json.
  */
 
 const { autoUpdater } = require("electron-updater");
@@ -11,7 +11,7 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const STABLE_TAG = "v1.0.0";
+const STABLE_TAG = "v1.0.2";
 const REPO = "lincolneulogio/cursodown";
 
 /** @typedef {"idle"|"checking"|"available"|"not-available"|"downloading"|"downloaded"|"error"} UpdatePhase */
@@ -53,7 +53,7 @@ function loadLocalBuildInfo() {
 	try {
 		return require("../../app/build-info.json");
 	} catch (_error) {
-		return { stableVersion: "1.0.0", buildId: 0, releasedAt: null, gitSha: null };
+		return { stableVersion: "1.0.2", buildId: 0, releasedAt: null, gitSha: null };
 	}
 }
 
@@ -176,8 +176,8 @@ async function checkForUpdates({ silent = false } = {}) {
 					pendingInstallerUrl = releaseAssetUrl(parsed.filePath);
 				}
 			} catch (_ymlError) {
-				// Windows Setup name is stable for v1.0.0
-				pendingInstallerUrl = releaseAssetUrl("CursoDown_Setup-v1.0.0_win-x64.exe");
+				// Windows Setup name is stable for v1.0.2
+				pendingInstallerUrl = releaseAssetUrl("CursoDown_Setup-v1.0.2_win-x64.exe");
 			}
 
 			setState({
