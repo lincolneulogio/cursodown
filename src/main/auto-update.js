@@ -6,10 +6,13 @@
  */
 
 const { autoUpdater } = require("electron-updater");
-const { ipcMain, app, net } = require("electron");
+const { ipcMain, app } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
+const http = require("http");
+const https = require("https");
 const path = require("path");
+const { URL } = require("url");
 
 const STABLE_TAG = "v1.0.3";
 const REPO = "lincolneulogio/cursodown";
@@ -101,12 +104,66 @@ function friendlyUpdateError(err) {
 	return firstLine.length > 160 ? `${firstLine.slice(0, 160)}…` : firstLine;
 }
 
+/**
+ * Electron 22 has no net.fetch — use Node http(s) with redirects.
+ * @param {string} url
+ * @param {number} [redirects]
+ * @returns {Promise<{ ok: boolean, status: number, buffer: Buffer }>}
+ */
+function httpGet(url, redirects = 0) {
+	return new Promise((resolve, reject) => {
+		let parsed;
+		try {
+			parsed = new URL(url);
+		} catch (error) {
+			reject(error);
+			return;
+		}
+		const lib = parsed.protocol === "http:" ? http : https;
+		const req = lib.get(
+			url,
+			{
+				headers: {
+					"User-Agent": "CursoDown-Updater",
+					Accept: "*/*",
+				},
+			},
+			(res) => {
+				const status = res.statusCode || 0;
+				const location = res.headers.location;
+				if (location && [301, 302, 303, 307, 308].includes(status)) {
+					if (redirects >= 10) {
+						res.resume();
+						reject(new Error("Too many redirects"));
+						return;
+					}
+					const next = new URL(location, url).toString();
+					res.resume();
+					resolve(httpGet(next, redirects + 1));
+					return;
+				}
+				/** @type {Buffer[]} */
+				const chunks = [];
+				res.on("data", (chunk) => chunks.push(chunk));
+				res.on("end", () => {
+					resolve({
+						ok: status >= 200 && status < 300,
+						status,
+						buffer: Buffer.concat(chunks),
+					});
+				});
+			}
+		);
+		req.on("error", reject);
+	});
+}
+
 async function fetchText(url) {
-	const res = await net.fetch(url, { redirect: "follow" });
+	const res = await httpGet(url);
 	if (!res.ok) {
 		throw new Error(`HTTP ${res.status} for ${url}`);
 	}
-	return res.text();
+	return res.buffer.toString("utf8");
 }
 
 async function fetchJson(url) {
@@ -224,15 +281,13 @@ async function downloadUpdate() {
 
 	try {
 		setState({ phase: "downloading", percent: 5, error: null });
-		const res = await net.fetch(pendingInstallerUrl, { redirect: "follow" });
+		const res = await httpGet(pendingInstallerUrl);
 		if (!res.ok) throw new Error(`HTTP ${res.status} downloading update`);
 
 		const fileName = path.basename(new URL(pendingInstallerUrl).pathname);
 		const target = path.join(app.getPath("temp"), fileName);
-		setState({ phase: "downloading", percent: 20, error: null });
-		const buffer = Buffer.from(await res.arrayBuffer());
 		setState({ phase: "downloading", percent: 85, error: null });
-		fs.writeFileSync(target, buffer);
+		fs.writeFileSync(target, res.buffer);
 		pendingInstallerPath = target;
 		setState({ phase: "downloaded", percent: 100, error: null });
 	} catch (err) {
