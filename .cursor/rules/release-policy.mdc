@@ -5,9 +5,9 @@ alwaysApply: true
 
 # Releases CursoDown
 
-- Release estable actual: **`v1.0.2`** (Latest). Version en `package.json`: **`1.0.2`**.
-- **NO** crear tags/releases nuevos (`v1.0.3`, `v1.0.4`, …) ni drafts intermedios salvo que el usuario lo pida.
+- Release estable actual: **`v1.0.3`** (Latest). Version en `package.json`: **`1.0.3`**.
+- **NO** crear tags/releases nuevos ni drafts intermedios salvo que el usuario lo pida.
 - Commits a `main` estan bien; publicar instaladores solo cuando el usuario diga (release / publica / tag).
-- Al publicar: actualizar el **mismo** tag estable (force) y regenerar artefactos en ese release; no abrir otro numero de version.
+- Al publicar: actualizar el **mismo** tag estable (force) y regenerar artefactos; no abrir otro numero de version sin pedirlo.
 - Evitar dejar releases en **Draft** a medias: o se completa Publish o se borra el draft.
 - El `buildId` en `app/build-info.json` (estampado en CI) permite auto-update al republicar el mismo tag.

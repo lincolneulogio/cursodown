@@ -81,18 +81,18 @@ npm run dev            # Vite HMR + Electron
 
 ## Releases e instaladores
 
-**Politica:** una sola version estable **`1.0.2`** / tag **`v1.0.2`** (Latest).
-No se crean `v1.0.3`, `v1.0.4`, etc. ni drafts intermedios salvo que se pida.
+**Politica:** version estable actual **`1.0.3`** / tag **`v1.0.3`**.
+No se crean mas versiones ni drafts intermedios salvo que se pida.
 
-Los cambios se acumulan en `main` y, al publicar, se actualiza el **mismo** tag `v1.0.2`.
+Los cambios se acumulan en `main` y, al publicar, se actualiza el tag estable pedido.
 
 ### Auto-actualizacion
-La app compara un `buildId` interno (`app/build-info.json`) con el del release `v1.0.2`.
+La app compara un `buildId` interno (`app/build-info.json`) con el del release estable.
 
 ```bash
-# Cuando el usuario pida publicar la estable:
-git tag -f v1.0.2
-git push origin v1.0.2 --force
+# Ejemplo (solo si el usuario pide publicar):
+git tag -f v1.0.3
+git push origin v1.0.3 --force
 ```
 
 | Plataforma | Paquetes |
@@ -101,7 +101,7 @@ git push origin v1.0.2 --force
 | macOS | DMG / ZIP (x64 y arm64) |
 | Linux | AppImage, deb, rpm |
 
-Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.2)
+Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.3)
 
 ## CI / CD
 
