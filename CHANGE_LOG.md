@@ -1,32 +1,25 @@
 # Change Log
 
-## Version [1.0.2](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.2)
+## Version [1.0.0](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.0) — estable
 ##### Aug 28, 2026
 
-### Instaladores
-- Windows: Setup NSIS (wizard, acceso directo) + Portable x64
-- macOS: DMG + ZIP (x64 / arm64)
-- Linux: AppImage + deb + rpm (x64)
-
-## Version [1.0.1](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.1)
-##### Aug 28, 2026
-
-### Fixed
-- Crash al abrir instaladores/portable: `.env` ya no es obligatorio en builds empaquetados
-- Sentry solo se inicializa si hay `SENTRY_DSN` válido
-
-## Version [1.0.0](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.0) — CursoDown
-##### Aug 28, 2026
-
-Primera release pública de **CursoDown**.
+Primera versión estable y final de **CursoDown**.
 
 ### Destacado
 - Rebrand a **CursoDown** (Electron + React + TypeScript + Tailwind)
 - UI moderna: login, cursos, biblioteca, ajustes y logger
 - Servicios core tipados (download queue, library, m3u8, udemy)
-- Instaladores multiplataforma: Windows, macOS y Linux
-- CI (typecheck + tests) y Publish automático por tags `v*`
 - Logo con fondo transparente
+- CI (typecheck + tests) y Publish automático por tags `v*`
+
+### Instaladores
+- **Windows:** Setup NSIS (wizard, accesos directos) + Portable x64
+- **macOS:** DMG + ZIP (x64 / arm64)
+- **Linux:** AppImage + deb + rpm (x64)
+
+### Estabilidad
+- `.env` opcional en builds empaquetados (sin crash al abrir)
+- Sentry solo si hay `SENTRY_DSN` válido
 
 ### Herencia
 Fork basado en Udeler / udemy-downloader-gui (upstream histórico hasta 1.14.0).
