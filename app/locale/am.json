@@ -96,6 +96,8 @@
   "Update ready to install": "",
   "Restart and install": "",
   "Update failed": "",
+  "Update is still being published. Try again in a few minutes.": "",
+  "Could not check for updates. Check your connection.": "",
   "You are on the latest version": "",
   "Dev mode — updates disabled": "",
   "Start pending downloads at startup": "መተግበሪያው ሲጀምር የቆሙ ማውረዶችን ጀምር",

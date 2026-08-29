@@ -15,7 +15,7 @@ const { ipcMain, app } = require("electron");
  *   currentVersion: string,
  *   availableVersion: string | null,
  *   releaseNotes: string | null,
- * percent: number,
+ *   percent: number,
  *   error: string | null,
  *   packaged: boolean
  * }} */
@@ -33,6 +33,7 @@ let state = {
 let getMainWindow = null;
 let wired = false;
 let checking = false;
+let lastCheckSilent = false;
 
 function snapshot() {
 	return { ...state, currentVersion: app.getVersion(), packaged: app.isPackaged };
@@ -48,6 +49,30 @@ function broadcast(channel, payload) {
 function setState(patch) {
 	state = { ...state, ...patch };
 	broadcast("updates:state", snapshot());
+}
+
+function isTransientPublishError(message) {
+	return /latest\.ya?ml|404|Cannot find latest|HttpError:\s*404|not yet uploaded|ENOTFOUND/i.test(
+		String(message || "")
+	);
+}
+
+/**
+ * Keep user-facing errors short (no stack / headers dump).
+ * Codes UPDATE_* are translated in the renderer.
+ * @param {unknown} err
+ */
+function friendlyUpdateError(err) {
+	const raw =
+		err && typeof err === "object" && "message" in err ? String(err.message) : String(err || "Update error");
+	if (/latest\.ya?ml|Cannot find latest|HttpError:\s*404/i.test(raw)) {
+		return "UPDATE_PUBLISHING";
+	}
+	if (/ENOTFOUND|ETIMEDOUT|ECONNRESET|net::|network/i.test(raw)) {
+		return "UPDATE_NETWORK";
+	}
+	const firstLine = raw.split(/\r?\n/)[0].trim();
+	return firstLine.length > 160 ? `${firstLine.slice(0, 160)}…` : firstLine;
 }
 
 function setupAutoUpdater() {
@@ -100,12 +125,19 @@ function setupAutoUpdater() {
 
 	autoUpdater.on("error", (err) => {
 		checking = false;
-		const message = err && err.message ? err.message : String(err || "Update error");
-		setState({ phase: "error", error: message });
+		const code = friendlyUpdateError(err);
+		const raw = err && err.message ? err.message : String(err || "");
+		// Silent startup check during incomplete Publish: don't scare the user.
+		if (lastCheckSilent && isTransientPublishError(raw)) {
+			setState({ phase: "idle", error: null });
+			return;
+		}
+		setState({ phase: "error", error: code });
 	});
 }
 
 async function checkForUpdates({ silent = false } = {}) {
+	lastCheckSilent = Boolean(silent);
 	if (!app.isPackaged) {
 		setState({
 			phase: "not-available",
@@ -119,8 +151,12 @@ async function checkForUpdates({ silent = false } = {}) {
 		await autoUpdater.checkForUpdates();
 	} catch (err) {
 		checking = false;
-		const message = err && err.message ? err.message : String(err);
-		setState({ phase: "error", error: message });
+		const raw = err && err.message ? err.message : String(err);
+		if (silent && isTransientPublishError(raw)) {
+			setState({ phase: "idle", error: null });
+		} else {
+			setState({ phase: "error", error: friendlyUpdateError(err) });
+		}
 	}
 	return snapshot();
 }
@@ -137,8 +173,7 @@ async function downloadUpdate() {
 		setState({ phase: "downloading", percent: 0, error: null });
 		await autoUpdater.downloadUpdate();
 	} catch (err) {
-		const message = err && err.message ? err.message : String(err);
-		setState({ phase: "error", error: message });
+		setState({ phase: "error", error: friendlyUpdateError(err) });
 	}
 	return snapshot();
 }
@@ -147,7 +182,6 @@ function installUpdate() {
 	if (!app.isPackaged || state.phase !== "downloaded") {
 		return { ok: false, reason: state.phase };
 	}
-	// isSilent=false, isForceRunAfter=true
 	setImmediate(() => {
 		autoUpdater.quitAndInstall(false, true);
 	});

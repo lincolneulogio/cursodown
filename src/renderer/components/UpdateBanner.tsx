@@ -8,6 +8,17 @@ interface UpdateBannerProps {
 	onDismiss: () => void;
 }
 
+function resolveUpdateError(raw: string | null, t: (key: string) => string): string {
+	if (!raw) return t("Update failed");
+	if (raw === "UPDATE_PUBLISHING") {
+		return t("Update is still being published. Try again in a few minutes.");
+	}
+	if (raw === "UPDATE_NETWORK") {
+		return t("Could not check for updates. Check your connection.");
+	}
+	return raw;
+}
+
 export function UpdateBanner({ status, onDownload, onInstall, onDismiss }: UpdateBannerProps) {
 	const { t } = useI18n();
 	const version = status.availableVersion || "";
@@ -80,9 +91,7 @@ export function UpdateBanner({ status, onDownload, onInstall, onDismiss }: Updat
 	if (status.phase === "error" && status.error) {
 		return (
 			<div className="flex flex-wrap items-center justify-between gap-3 border-b border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm">
-				<p className="text-rose-200">
-					{t("Update failed")}: {status.error}
-				</p>
+				<p className="text-rose-200">{resolveUpdateError(status.error, t)}</p>
 				<button
 					type="button"
 					onClick={onDismiss}

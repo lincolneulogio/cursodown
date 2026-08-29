@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag a publicar (debe existir, p. ej. v1.0.0)"
+        description: "Tag a publicar (debe existir, p. ej. v1.0.2)"
         required: true
-        default: "v1.0.0"
+        default: "v1.0.2"
 
 permissions:
   contents: write
@@ -73,3 +73,45 @@ jobs:
           max_attempts: 3
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: true
+
+  # Keep the GitHub release as draft while matrix jobs upload assets, then publish
+  # so auto-update never sees a missing latest.yml (404).
+  finalize:
+    name: Publish release
+    needs: publish
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Resolve tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Undraft release when assets are ready
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          # Wait briefly for GitHub to index uploaded assets
+          for i in 1 2 3 4 5; do
+            COUNT=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '.assets | length')
+            echo "Assets on ${TAG}: ${COUNT}"
+            if [ "${COUNT}" -ge 10 ]; then
+              break
+            fi
+            sleep 15
+          done
+          # Ensure required update metadata exists before making it latest
+          HAS_YML=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "latest.yml")) | length')
+          if [ "${HAS_YML}" = "0" ]; then
+            echo "latest.yml still missing on ${TAG}; leaving draft state if any"
+            exit 1
+          fi
+          gh release edit "${TAG}" --draft=false --latest
+          echo "Release ${TAG} is now public (latest)."

@@ -239,7 +239,15 @@ export function SettingsPage({ onBusy, onAppearanceChange }: SettingsPageProps) 
 										if (status.phase === "not-available") {
 											api.notify.show(t("Updates"), t("You are on the latest version"));
 										} else if (status.phase === "error" && status.error) {
-											api.dialog.showErrorBox(t("Updates"), status.error);
+											const msg =
+												status.error === "UPDATE_PUBLISHING"
+													? t(
+															"Update is still being published. Try again in a few minutes."
+														)
+													: status.error === "UPDATE_NETWORK"
+														? t("Could not check for updates. Check your connection.")
+														: status.error;
+											api.notify.show(t("Updates"), msg);
 										}
 									})
 									.finally(() => onBusy(false));

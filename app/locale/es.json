@@ -96,6 +96,8 @@
   "Update ready to install": "Actualización lista para instalar",
   "Restart and install": "Reiniciar e instalar",
   "Update failed": "Error al actualizar",
+  "Update is still being published. Try again in a few minutes.": "La actualización aún se está publicando. Intenta de nuevo en unos minutos.",
+  "Could not check for updates. Check your connection.": "No se pudo buscar actualizaciones. Revisa tu conexión.",
   "Dismiss": "Cerrar",
   "You are on the latest version": "Ya tienes la última versión",
   "Dev mode — updates disabled": "Modo desarrollo — updates desactivados",
