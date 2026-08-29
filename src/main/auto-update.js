@@ -209,22 +209,26 @@ function releaseAssetUrl(fileName, tag = STABLE_TAG) {
 }
 
 async function fetchRemoteBuildInfo() {
+	// Always prefer GitHub "Latest" so installs built with an older STABLE_TAG
+	// (e.g. v1.0.4) still discover newer releases (v1.0.5+).
+	const latestApi = `https://api.github.com/repos/${REPO}/releases/latest`;
 	try {
-		return await fetchJson(releaseAssetUrl("build-info.json"));
-	} catch (_error) {
-		const api = `https://api.github.com/repos/${REPO}/releases/latest`;
-		const release = await fetchJson(api);
+		const release = await fetchJson(latestApi);
 		const tag = String(release.tag_name || STABLE_TAG);
-		const asset = (release.assets || []).find((a) => a.name === "build-info.json");
+		const asset = (release.assets || []).find((a) => a && a.name === "build-info.json");
 		if (asset?.browser_download_url) {
 			const info = await fetchJson(asset.browser_download_url);
 			return { ...info, _tag: tag };
 		}
-		const byTag = await fetchJson(`https://api.github.com/repos/${REPO}/releases/tags/${STABLE_TAG}`);
-		const tagged = (byTag.assets || []).find((a) => a.name === "build-info.json");
-		if (!tagged?.browser_download_url) throw new Error("build-info.json missing on stable release");
-		const info = await fetchJson(tagged.browser_download_url);
-		return { ...info, _tag: STABLE_TAG };
+		const info = await fetchJson(releaseAssetUrl("build-info.json", tag));
+		return { ...info, _tag: tag };
+	} catch (latestError) {
+		try {
+			const info = await fetchJson(releaseAssetUrl("build-info.json", STABLE_TAG));
+			return { ...info, _tag: STABLE_TAG };
+		} catch (_stableError) {
+			throw latestError;
+		}
 	}
 }
 
@@ -258,8 +262,10 @@ async function checkForUpdates({ silent = false } = {}) {
 		const localVersion = app.getVersion();
 		const remote = await fetchRemoteBuildInfo();
 		const remoteBuildId = Number(remote.buildId) || 0;
-		const remoteVersion = String(remote.stableVersion || STABLE_VERSION);
 		const remoteTag = String(remote._tag || STABLE_TAG);
+		const remoteVersion = String(
+			remote.stableVersion || String(remoteTag).replace(/^v/i, "") || STABLE_VERSION
+		);
 
 		const newerSemver = cmpSemver(remoteVersion, localVersion) > 0;
 		const newerBuild = remoteBuildId > localBuildId;
