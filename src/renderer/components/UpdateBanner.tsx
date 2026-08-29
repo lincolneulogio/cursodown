@@ -13,6 +13,9 @@ function resolveUpdateError(raw: string | null, t: (key: string) => string): str
 	if (raw === "UPDATE_PUBLISHING") {
 		return t("Update is still being published. Try again in a few minutes.");
 	}
+	if (raw === "UPDATE_CHECKSUM") {
+		return t("Update file is incomplete. Download the installer from the Releases page.");
+	}
 	if (raw === "UPDATE_NETWORK") {
 		return t("Could not check for updates. Check your connection.");
 	}

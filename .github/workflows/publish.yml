@@ -76,15 +76,8 @@ jobs:
       - name: Build Electron packages
         uses: heliomarpm/action-electron-builder@2.1
         with:
-          max_attempts: 3
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: true
-
-      - name: Build Windows ia32 packages
-        if: runner.os == 'Windows'
-        uses: heliomarpm/action-electron-builder@2.1
-        with:
-          args: --ia32
+          # Windows: x64+ia32 in ONE publish so latest.yml sha512 matches the uploaded Setup.
+          args: ${{ runner.os == 'Windows' && '-w --x64 --ia32' || '' }}
           max_attempts: 3
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: true

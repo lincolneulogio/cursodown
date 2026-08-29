@@ -91,6 +91,9 @@ function friendlyUpdateError(err) {
 	if (/latest\.ya?ml|build-info\.json|Cannot find latest|HttpError:\s*404/i.test(raw)) {
 		return "UPDATE_PUBLISHING";
 	}
+	if (/sha512|checksum mismatch/i.test(raw)) {
+		return "UPDATE_CHECKSUM";
+	}
 	if (/ENOTFOUND|ETIMEDOUT|ECONNRESET|net::|network/i.test(raw)) {
 		return "UPDATE_NETWORK";
 	}

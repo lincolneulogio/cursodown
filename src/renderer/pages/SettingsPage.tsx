@@ -244,9 +244,13 @@ export function SettingsPage({ onBusy, onAppearanceChange }: SettingsPageProps) 
 													? t(
 															"Update is still being published. Try again in a few minutes."
 														)
-													: status.error === "UPDATE_NETWORK"
-														? t("Could not check for updates. Check your connection.")
-														: status.error;
+													: status.error === "UPDATE_CHECKSUM"
+														? t(
+																"Update file is incomplete. Download the installer from the Releases page."
+															)
+														: status.error === "UPDATE_NETWORK"
+															? t("Could not check for updates. Check your connection.")
+															: status.error;
 											api.notify.show(t("Updates"), msg);
 										}
 									})

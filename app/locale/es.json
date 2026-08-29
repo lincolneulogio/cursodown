@@ -97,6 +97,7 @@
   "Restart and install": "Reiniciar e instalar",
   "Update failed": "Error al actualizar",
   "Update is still being published. Try again in a few minutes.": "La actualización aún se está publicando. Intenta de nuevo en unos minutos.",
+  "Update file is incomplete. Download the installer from the Releases page.": "El archivo de actualización está incompleto. Descarga el instalador desde Releases.",
   "Could not check for updates. Check your connection.": "No se pudo buscar actualizaciones. Revisa tu conexión.",
   "Dismiss": "Cerrar",
   "You are on the latest version": "Ya tienes la última versión",
