@@ -1,5 +1,12 @@
 # Change Log
 
+## Version [1.0.1](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.1)
+##### Aug 28, 2026
+
+### Fixed
+- Crash al abrir instaladores/portable: `.env` ya no es obligatorio en builds empaquetados
+- Sentry solo se inicializa si hay `SENTRY_DSN` válido
+
 ## Version [1.0.0](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.0) — CursoDown
 ##### Aug 28, 2026
 

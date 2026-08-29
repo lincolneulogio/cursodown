@@ -17,8 +17,11 @@ if (isDebug) {
 
 if (app.isPackaged) {
 	process.env.IS_PACKAGE = true;
-	const Sentry = require("@sentry/electron");
-	Sentry.init({ dsn: process.env.SENTRY_DSN });
+	const sentryDsn = String(process.env.SENTRY_DSN || "").trim();
+	if (sentryDsn && sentryDsn !== "<YOUR_ID>") {
+		const Sentry = require("@sentry/electron");
+		Sentry.init({ dsn: sentryDsn });
+	}
 } else {
 	process.env.SENTRY_DSN = "";
 }
