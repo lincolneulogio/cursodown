@@ -1,7 +1,7 @@
 {
   "name": "cursodown",
   "productName": "CursoDown",
-  "version": "1.14.0",
+  "version": "1.0.0",
   "description": "Descargador de cursos de Udemy para escritorio.",
   "main": "main.js",
   "type": "commonjs",
@@ -100,14 +100,17 @@
       ]
     },
     "mac": {
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "linux": {
       "category": "Utility",
       "target": [
         "AppImage",
         "deb",
-        "freebsd",
         "rpm"
       ]
     }

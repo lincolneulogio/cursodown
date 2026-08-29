@@ -84,8 +84,8 @@ npm run dev            # Vite HMR + Electron
 Los releases se publican automáticamente al crear un tag `v*`:
 
 ```bash
-git tag v1.14.0
-git push origin v1.14.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 Eso dispara el workflow **Publish**, que genera paquetes en:
