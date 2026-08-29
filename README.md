@@ -1,180 +1,142 @@
 <span id="top"></span>
-<h1 align="center">
-  <img src="https://user-images.githubusercontent.com/13087389/126053559-d4c7d080-0ad3-4deb-83dd-2a52b209e5f2.png" width="128" />
-  <br> Udeler | Course Downloader
-
-  [![DeepScan](https://deepscan.io/api/teams/19612/projects/23071/branches/688725/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=19612&pid=23071&bid=688725)
-  [![CodeFactor](https://www.codefactor.io/repository/github/heliomarpm/udemy-downloader-gui/badge)](https://www.codefactor.io/repository/github/heliomarpm/udemy-downloader-gui) ![CodeQL](https://github.com/heliomarpm/udemy-downloader-gui/actions/workflows/codeql-analysis.yml/badge.svg) ![Publish](https://github.com/heliomarpm/udemy-downloader-gui/actions/workflows/publish.yml/badge.svg) <a href="https://navto.me/heliomarpm" target="_blank"><img src="https://navto.me/assets/navigatetome-brand.png" width="32"/></a>
-
-</h1>
 
 <p align="center">
-  <!-- PixMe -->
-  <!-- <a href="https://www.pixme.bio/heliomarpm" target="_blank" rel="noopener noreferrer">
-    <img alt="pixme url" src="https://img.shields.io/badge/donate%20on-pixme-1C1E26?style=for-the-badge&labelColor=1C1E26&color=28f4f4"/>
-  </a> -->
-  <!-- PayPal -->
-  <a href="https://bit.ly/paypal-udeler" target="_blank" rel="noopener noreferrer">
-    <img alt="paypal url" src="https://img.shields.io/badge/donate%20on-paypal-1C1E26?style=for-the-badge&labelColor=1C1E26&color=0475fe"/>
+  <img src="app/assets/images/logo64.png" alt="CursoDown" width="128" />
+</p>
+
+<h1 align="center">CursoDown</h1>
+
+<p align="center">
+  <strong>Descargador de cursos de Udemy para escritorio</strong><br />
+  Electron · React · TypeScript · Tailwind CSS
+</p>
+
+<p align="center">
+  <a href="https://github.com/lincolneulogio/cursodown/releases">
+    <img alt="release" src="https://img.shields.io/github/v/release/lincolneulogio/cursodown?style=for-the-badge&labelColor=0b0e14&color=17A89F" />
   </a>
-  <!-- Ko-fi -->
-  <a href="https://ko-fi.com/heliomarpm" target="_blank" rel="noopener noreferrer">
-    <img alt="kofi url" src="https://img.shields.io/badge/kofi-1C1E26?style=for-the-badge&labelColor=1C1E26&color=ff5f5f"/>
+  <a href="https://github.com/lincolneulogio/cursodown/actions/workflows/ci.yml">
+    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/lincolneulogio/cursodown/ci.yml?branch=main&style=for-the-badge&label=CI&labelColor=0b0e14" />
   </a>
-  <!-- LiberaPay -->  
-  <a href="https://liberapay.com/heliomarpm" target="_blank" rel="noopener noreferrer">
-     <img alt="liberapay url" src="https://img.shields.io/badge/liberapay-1C1E26?style=for-the-badge&labelColor=1C1E26&color=f6c915"/>
+  <a href="https://github.com/lincolneulogio/cursodown/actions/workflows/publish.yml">
+    <img alt="Publish" src="https://img.shields.io/github/actions/workflow/status/lincolneulogio/cursodown/publish.yml?style=for-the-badge&label=Publish&labelColor=0b0e14" />
   </a>
-	  <!-- GitHub Sponsors -->
-  <a href="https://github.com/sponsors/heliomarpm" target="_blank" rel="noopener noreferrer">
-    <img alt="license url" src="https://img.shields.io/badge/GitHub%20-Sponsor-1C1E26?style=for-the-badge&labelColor=1C1E26&color=db61a2"/>
-  </a> 
-	<br>
-  <!-- Version -->
-  <a href="https://github.com/heliomarpm/udemy-downloader-gui/releases" target="_blank" rel="noopener noreferrer">
-     <img alt="releases url" src="https://img.shields.io/github/v/release/heliomarpm/udemy-downloader-gui?style=for-the-badge&labelColor=1C1E26&color=2ea043"/>
+  <a href="https://github.com/lincolneulogio/cursodown/actions/workflows/codeql-analysis.yml">
+    <img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/lincolneulogio/cursodown/codeql-analysis.yml?branch=main&style=for-the-badge&label=CodeQL&labelColor=0b0e14" />
   </a>
-  <!-- Downloads -->
-  <a href="https://github.com/heliomarpm/udemy-downloader-gui/releases" target="_blank" rel="noopener noreferrer">
-    <img alt="GitHub Downloads" src="https://img.shields.io/github/downloads/heliomarpm/udemy-downloader-gui/total?style=for-the-badge&labelColor=1C1E26&color=2ea043">
-  </a>
-  <!-- Issues -->
-  <!-- <a href="https://github.com/heliomarpm/udemy-downloader-gui/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc" target="_blank">
-    <img alt="GitHub issues" src="https://img.shields.io/github/issues/heliomarpm/udemy-downloader-gui?style=for-the-badge&labelColor=1C1E26">
-  </a> -->
-  <!-- License -->
-  <a href="https://github.com/heliomarpm/udemy-downloader-gui/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">
-    <img alt="license url" src="https://img.shields.io/badge/license%20-MIT-1C1E26?style=for-the-badge&labelColor=1C1E26&color=61ffca"/>
+  <a href="LICENSE">
+    <img alt="license" src="https://img.shields.io/badge/license-MIT-1C1E26?style=for-the-badge&labelColor=0b0e14&color=61ffca" />
   </a>
 </p>
 
-<div align="center">
-	
-  A cross-platform app to download your purchased courses (paid or free) from Udemy, the code is provided as-is and I am not held resposible for any legal issues resulting from the use of this program.<br>  
-  Project originally by [@FaisalUmair](https://github.com/FaisalUmair/udemy-downloader-gui) is archived.<br>
-  
-  ![](https://i.imgur.com/nsaAgDU.gif)
+---
 
-  <table border=0 cellspacing=0 celspadding=0>
-  <tr>
-    <td><img src="https://user-images.githubusercontent.com/13087389/126054264-48caf1f5-472f-44b0-991a-145c9169a2c3.png" width="240px"/></td>
-    <td><img src="https://user-images.githubusercontent.com/13087389/126054265-4a343a67-803a-4400-b196-090864fbc1eb.png" width="240px"/></td>
-    <td><img src="https://user-images.githubusercontent.com/13087389/126076966-57f318ae-c9ee-4948-862f-87fae4502290.png" width="240px"/></td>
-  </tr>
-  </table>  
-</div>
-
+Aplicación multiplataforma para descargar **tus cursos inscritos** en Udemy (gratuitos o de pago).  
+Basada en el proyecto original de [@FaisalUmair](https://github.com/FaisalUmair/udemy-downloader-gui) y el mantenimiento posterior de la comunidad.
 
 > [!WARNING]
-> * This software is intended to help you download Udemy courses for personal use only. 
-> * Udeler downloads the lecture videos by simply using the source of the video player returned to the user by Udemy after proper authentication, you can also do the same manually. 
-> * Sharing the content of your subscribed courses is strictly prohibited under Udemy Terms of Use.  
-> * Each and every Udemy course is subject to copyright infringement. Downloading courses is against Udemy's Terms of Service, I am NOT responsible for your account being suspended as a result of using this program!
-> * This software does not magically download any paid course available on Udemy, you need to provide your Udemy login credentials to download the courses you have enrolled in. 
-> * Many download managers use same method to download videos on a web page. This app only automates the process of a user doing this manually in a web browser.
-> * Udemy has started to encrypt many of their course videos, please do not open an issue if some/all videos are skipped. Breaking DRM encryption implies piracy, so it will not be included in this application.
-> * This program is WIP, the code is provided as-is and I am not held resposible for any legal issues resulting from the use of this program.
+> Uso personal únicamente. Respetá los [Términos de Uso de Udemy](https://www.udemy.com/terms/).  
+> No rompe DRM: los videos cifrados se omiten. El desarrollador no se responsabiliza por sanciones en tu cuenta.
 
+## Características
 
-## To Use
+- Login con cuenta Udemy / Udemy Business o Access Token
+- Listado y búsqueda de cursos inscritos
+- Planificador de descarga por secciones / lecciones
+- Cola de descargas concurrentes
+- Biblioteca local de cursos descargados
+- UI moderna (React + Tailwind) en modo oscuro
+- Builds para Windows, macOS y Linux vía GitHub Actions
 
-To clone and run this repository you'll need [Git](https://git-scm.com) and [Node.js](https://nodejs.org/en/download/) (which comes with [npm](http://npmjs.com)) installed on your computer. \
-From your command line:
+## Requisitos
+
+- [Node.js](https://nodejs.org/) 18+ (recomendado LTS)
+- [Git](https://git-scm.com/)
+- npm
+
+## Instalación (desarrollo)
 
 ```bash
-# Clone this repository
-git clone https://github.com/heliomarpm/udemy-downloader-gui
-# Go into the repository
-cd udemy-downloader-gui
+git clone https://github.com/lincolneulogio/cursodown.git
+cd cursodown
 
-# Copy file environments
-copy .env.example .env
--- or if linux --
-cp .env.example .env
+cp .env.example .env   # en Windows: copy .env.example .env
 
-# Install dependencies
 npm install
-# Run the app
-npm start
--- or --
-# Run the app mode develop
-npm run dev
+npm start              # build + Electron
+# o
+npm run dev            # Vite HMR + Electron
 ```
 
-> [!NOTE]
-> If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
+### Scripts útiles
 
+| Script | Descripción |
+| --- | --- |
+| `npm start` | Compila core + renderer y abre la app |
+| `npm run dev` | Modo desarrollo con Vite |
+| `npm test` | Tests (Vitest) |
+| `npm run typecheck` | Typecheck del core |
+| `npm run typecheck:ui` | Typecheck del renderer |
+| `npm run build` | Genera instaladores con electron-builder |
 
-## Releasing
+## Releases e instaladores
 
-> [!CAUTION]
-> To be able to perform `auto-updates` you will need a `code signed app`, for this purpose you will need to configure it by yourself, so check the [electron-builder](https://www.electron.build/code-signing) and [action-electron-builder](https://github.com/samuelmeuli/action-electron-builder#code-signing) docs please to get know how to do this.
-
-To release your app on a GitHub release with `Windows`, `Mac` and `Linux` binaries, you can perform the following commands:
+Los releases se publican automáticamente al crear un tag `v*`:
 
 ```bash
-git pull
-npm run deploy
+git tag v1.14.0
+git push origin v1.14.0
 ```
 
-###### **Note**: Script for deploy is contribution by @daltonmenezes
+Eso dispara el workflow **Publish**, que genera paquetes en:
 
-## [![Repography logo](https://images.repography.com/logo.svg)](https://repography.com) / Recent activity [![Time period](https://images.repography.com/52680464/heliomarpm/udemy-downloader-gui/recent-activity/y07E94GgUZZthzcrKMmW0GjONkUSnFxjetJxoZvwC_A/syRnMFBABLrEXfXXb4Sif2bTt2LuB4UdVpVtIk1uqKg_badge.svg)](https://repography.com)
-[![Timeline graph](https://images.repography.com/52680464/heliomarpm/udemy-downloader-gui/recent-activity/y07E94GgUZZthzcrKMmW0GjONkUSnFxjetJxoZvwC_A/syRnMFBABLrEXfXXb4Sif2bTt2LuB4UdVpVtIk1uqKg_timeline.svg)](https://github.com/heliomarpm/udemy-downloader-gui/commits)
-[![Issue status graph](https://images.repography.com/52680464/heliomarpm/udemy-downloader-gui/recent-activity/y07E94GgUZZthzcrKMmW0GjONkUSnFxjetJxoZvwC_A/syRnMFBABLrEXfXXb4Sif2bTt2LuB4UdVpVtIk1uqKg_issues.svg)](https://github.com/heliomarpm/udemy-downloader-gui/issues)
-[![Trending topics](https://images.repography.com/52680464/heliomarpm/udemy-downloader-gui/recent-activity/y07E94GgUZZthzcrKMmW0GjONkUSnFxjetJxoZvwC_A/syRnMFBABLrEXfXXb4Sif2bTt2LuB4UdVpVtIk1uqKg_words.svg)](https://github.com/heliomarpm/udemy-downloader-gui/commits)
-[![Top contributors](https://images.repography.com/52680464/heliomarpm/udemy-downloader-gui/recent-activity/y07E94GgUZZthzcrKMmW0GjONkUSnFxjetJxoZvwC_A/syRnMFBABLrEXfXXb4Sif2bTt2LuB4UdVpVtIk1uqKg_users.svg)](https://github.com/heliomarpm/udemy-downloader-gui/graphs/contributors)
+| Plataforma | Paquetes |
+| --- | --- |
+| Windows | Setup (NSIS) + Portable (x64 / ia32) |
+| macOS | DMG / app |
+| Linux | AppImage, deb, rpm, freebsd |
 
+Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases)
 
-## Contributing:
+> La firma de código (auto-update) requiere configuración propia. Ver [electron-builder code signing](https://www.electron.build/code-signing).
 
-Please make sure to read the [Contributing Guide](https://github.com/heliomarpm/udemy-downloader-gui/blob/master/docs/CONTRIBUTING.md) before making a pull request.
+## CI / CD
 
-Thank you to all the people who already contributed to Udeler ❤️!
+| Workflow | Qué hace |
+| --- | --- |
+| [CI](.github/workflows/ci.yml) | Install, typecheck, tests en push/PR a `main` |
+| [Publish](.github/workflows/publish.yml) | Build multi-OS y adjunta artefactos al release |
+| [CodeQL](.github/workflows/codeql-analysis.yml) | Análisis estático de seguridad |
 
-<a href="https://github.com/heliomarpm/udemy-downloader-gui/graphs/contributors" target="_blank">
-  <img src="https://contrib.nn.ci/api?repo=heliomarpm/udemy-downloader-gui&no_bot=true" />
-<!--   <img src="https://contrib.rocks/image?repo=heliomarpm/udemy-downloader-gui" /> -->
-</a>
+## Estructura
 
-<!-- ###### Made with [contrib.rocks](https://contrib.rocks). -->
-###### Made with [contrib.nn](https://contrib.nn.ci).
+```
+cursodown/
+├── src/main/          # Proceso principal Electron
+├── src/preload/       # Bridge seguro IPC
+├── src/renderer/      # UI React + Tailwind
+├── app/core/          # Servicios (download, udemy, m3u8, library)
+├── app/locale/        # i18n
+├── .github/workflows/ # Actions
+└── docs/              # Migración y contribución
+```
 
-That said, there's a bunch of ways you can contribute to this project, like by:
+## Contribuir
 
-- :star: Giving a star on this repository (this is very important and costs nothing)
-- :bug: Reporting a bug
-- :page_facing_up: Improving this documentation
-- :rotating_light: Sharing this project and recommending it to your friends
-- :dollar: Supporting this project on GitHub Sponsors, PayPal, Ko-fi or Liberapay, you decide. 😉
+1. Abrí un [issue](https://github.com/lincolneulogio/cursodown/issues) o usá las plantillas
+2. Creá un fork / branch
+3. Abrí un Pull Request
 
-## Donate
+Guías: [CONTRIBUTING](docs/CONTRIBUTING.md) · [SECURITY](docs/SECURITY.md) · [CODE OF CONDUCT](docs/CODE_OF_CONDUCT.md)
 
-Udeler is free and without any ads. If you appreciate that, please consider donating to the Developer.
+## Créditos
 
-<p align="center">
-  <!-- PixMe -->
-  <!-- <a href="https://www.pixme.bio/heliomarpm" target="_blank" rel="noopener noreferrer">
-    <img alt="pixme url" src="https://img.shields.io/badge/donate%20on-pixme-1C1E26?style=for-the-badge&labelColor=1C1E26&color=28f4f4"/>
-  </a> -->
-  <!-- PayPal -->
-  <a href="https://bit.ly/paypal-udeler" target="_blank" rel="noopener noreferrer">
-    <img alt="paypal url" src="https://img.shields.io/badge/donate%20on-paypal-1C1E26?style=for-the-badge&labelColor=1C1E26&color=0475fe"/>
-  </a>
-  <!-- Ko-fi -->
-  <a href="https://ko-fi.com/heliomarpm" target="_blank" rel="noopener noreferrer">
-    <img alt="kofi url" src="https://img.shields.io/badge/kofi-1C1E26?style=for-the-badge&labelColor=1C1E26&color=ff5f5f"/>
-  </a>
-  <!-- LiberaPay -->  
-  <a href="https://liberapay.com/heliomarpm" target="_blank" rel="noopener noreferrer">
-     <img alt="liberapay url" src="https://img.shields.io/badge/liberapay-1C1E26?style=for-the-badge&labelColor=1C1E26&color=f6c915"/>
-  </a>  
-  <!-- GitHub Sponsors -->
-  <a href="https://github.com/sponsors/heliomarpm" target="_blank" rel="noopener noreferrer">
-    <img alt="license url" src="https://img.shields.io/badge/GitHub%20-Sponsor-1C1E26?style=for-the-badge&labelColor=1C1E26&color=db61a2"/>
-  </a>
-</p>
+- Autor actual: **Lincol Eulogio Huanca**
+- Proyecto original: [@FaisalUmair](https://github.com/FaisalUmair/udemy-downloader-gui)
+- Fork / mantenimiento previo: [@heliomarpm](https://github.com/heliomarpm/udemy-downloader-gui)
 
-## License
+## Licencia
 
-[MIT © Heliomar P. Marques](https://github.com/heliomarpm/udemy-downloader-gui/blob/master/LICENSE) <a href="#top">🔝</a>
+[MIT](LICENSE) — ver archivo para detalles de copyright original.
+
+<a href="#top">↑ arriba</a>

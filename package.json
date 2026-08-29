@@ -12,13 +12,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/heliomarpm/udemy-downloader-gui.git"
+    "url": "https://github.com/lincolneulogio/cursodown.git"
   },
-  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lincolneulogio/cursodown/issues"
+  },
+  "homepage": "https://github.com/lincolneulogio/cursodown#readme",
+  "license": "MIT",
   "author": {
     "name": "Lincol Eulogio Huanca",
     "email": "",
-    "url": ""
+    "url": "https://github.com/lincolneulogio"
   },
   "scripts": {
     "dev": "npm run build:core && concurrently -k -n vite,electron -c cyan,magenta \"vite --config vite.config.mjs\" \"wait-on http://127.0.0.1:5173 && electron . --developer\"",

@@ -1,6 +1,8 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: "😎 Heliomar P. Marques"
-    url: https://navto.me/heliomarpm
-    about: About Me
-
+  - name: Releases / descargas
+    url: https://github.com/lincolneulogio/cursodown/releases
+    about: Instaladores Windows, macOS y Linux
+  - name: Documentación de migración
+    url: https://github.com/lincolneulogio/cursodown/tree/main/docs
+    about: Notas de arquitectura y fases de migración

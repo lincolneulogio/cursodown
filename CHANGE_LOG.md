@@ -1,10 +1,16 @@
 # Change Log
 
-## Version [1.14.0](https://github.com/heliomarpm/udemy-downloader-gui/compare/v1.13.4...v1.14.0)
-##### Dec, 21 2024
-![](https://img.shields.io/github/downloads/heliomarpm/udemy-downloader-gui/v1.14.0/total)
+## Version [1.14.0](https://github.com/lincolneulogio/cursodown/releases/tag/v1.14.0) — CursoDown
+##### Aug 28, 2026
 
-### features
+### CursoDown (fork)
+- Rebrand a **CursoDown** (Electron + React + TypeScript + Tailwind)
+- UI moderna con login, cursos, biblioteca, ajustes y logger
+- Servicios core tipados (download queue, library, m3u8, udemy)
+- CI (typecheck + tests) y Publish multi-plataforma por tags `v*`
+- Logo con fondo transparente
+
+### features (upstream 1.14.0)
 - Single search for courses purchased individually or subscribed to via subscription
 - Download list m3u file
 

@@ -1,17 +1,19 @@
 name: Publish
+
 on:
   push:
-    tags: ["*"]
+    tags: ["v*"]
+
+permissions:
+  contents: write
 
 jobs:
-
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
 
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
@@ -19,58 +21,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: create env file
-        run: |
-          touch .env
-          echo SENTRY_DSN=${{ secrets.SENTRY_DSN }} >> .env
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json')}}
+          node-version: 20
+          cache: npm
 
-      # - name: Install Node.js, NPM and Yarn
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: '>=16.8.0'
+      - name: Create env file
+        shell: bash
+        run: |
+          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" > .env
 
-      - name: apt-update
-        if: startsWith(matrix.os, 'ubuntu-latest')
-        run: sudo apt-get update
+      - name: Install Linux packaging deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools rpm
 
-      - name: autoremove
-        if: startsWith(matrix.os, 'ubuntu-latest')
-        run: sudo apt autoremove
+      - name: Install macOS DMG license helper
+        if: runner.os == 'macOS'
+        run: npm install dmg-license --no-save
 
-      - name: Install libarchive rpm on Linux
-        if: startsWith(matrix.os, 'ubuntu-latest')
-        run: sudo apt-get install libarchive-tools rpm
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Install dmg-license fo MacOS
-        if: startsWith(matrix.os, 'macos-latest')
-        run: npm install dmg-license
+      - name: Build core + renderer
+        run: |
+          npm run build:core
+          npm run build:renderer
 
-      - name: Build Electron App
+      - name: Build Electron packages
         uses: heliomarpm/action-electron-builder@2.1
         with:
           max_attempts: 3
-          github_token: ${{ secrets.github_token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           release: true
 
-      - name: Build Electron App Win32
-        if: startsWith(matrix.os, 'windows-latest')
+      - name: Build Windows ia32 packages
+        if: runner.os == 'Windows'
         uses: heliomarpm/action-electron-builder@2.1
         with:
           args: --ia32
           max_attempts: 3
-          github_token: ${{ secrets.github_token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           release: true
-
-      - name: see directory
-        if: startsWith(matrix.os, 'windows-latest') == false
-        run: ls ./dist
-
-      - name: see directory
-        if: startsWith(matrix.os, 'windows-latest')
-        run: dir dist
