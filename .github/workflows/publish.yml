@@ -132,17 +132,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
+          # Draft releases often 404 on GET /releases/tags/{tag}; use `gh release view`.
           TAG="${{ steps.tag.outputs.name }}"
           for i in 1 2 3 4 5 6 8; do
-            COUNT=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '.assets | length')
-            HAS_YML=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "latest.yml")) | length')
+            COUNT=$(gh release view "${TAG}" --json assets --jq '.assets | length' || echo 0)
+            HAS_YML=$(gh release view "${TAG}" --json assets --jq '[.assets[].name] | map(select(. == "latest.yml")) | length' || echo 0)
             echo "Assets=${COUNT} latest.yml=${HAS_YML}"
             if [ "${COUNT}" -ge 10 ] && [ "${HAS_YML}" != "0" ]; then
               break
             fi
             sleep 20
           done
-          HAS_YML=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "latest.yml")) | length')
+          HAS_YML=$(gh release view "${TAG}" --json assets --jq '[.assets[].name] | map(select(. == "latest.yml")) | length' || echo 0)
           if [ "${HAS_YML}" = "0" ]; then
             echo "latest.yml still missing on ${TAG}"
             exit 1
