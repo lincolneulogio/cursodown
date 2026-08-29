@@ -34,11 +34,13 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const IntegrityService = require("./integrity.service");
 /**
  * Builds the local library from download history and folders on disk.
  */
 class LibraryService {
-    static list(rootDir, history = [], downloadedCourses = []) {
+    static list(rootDir, history = [], downloadedCourses = [], options = {}) {
+        const scanIntegrity = options.scanIntegrity !== false;
         const byId = new Map();
         (downloadedCourses || []).forEach((course) => {
             if (!course)
@@ -53,6 +55,10 @@ class LibraryService {
                 image: course.image || "",
                 exists: false,
                 modifiedAt: 0,
+                sizeBytes: 0,
+                downloadedAt: null,
+                brokenCount: 0,
+                okMediaCount: 0,
             });
         });
         (history || []).forEach((entry) => {
@@ -68,11 +74,18 @@ class LibraryService {
                 image: "",
                 exists: false,
                 modifiedAt: 0,
+                sizeBytes: Number(entry.sizeBytes) || 0,
+                downloadedAt: entry.date || null,
+                brokenCount: 0,
+                okMediaCount: 0,
             };
             current.name = entry.name || current.name;
             current.path = entry.pathDownloaded || current.path;
             current.completed = Boolean(entry.completed) || current.completed;
             current.encryptedVideos = Math.max(current.encryptedVideos, Number(entry.encryptedVideos) || 0);
+            current.downloadedAt = entry.date || current.downloadedAt;
+            if (entry.sizeBytes)
+                current.sizeBytes = Number(entry.sizeBytes) || current.sizeBytes;
             byId.set(id, current);
         });
         if (rootDir && fs.existsSync(rootDir)) {
@@ -93,6 +106,10 @@ class LibraryService {
                         image: "",
                         exists: true,
                         modifiedAt: 0,
+                        sizeBytes: 0,
+                        downloadedAt: null,
+                        brokenCount: 0,
+                        okMediaCount: 0,
                     });
                 });
             }
@@ -104,15 +121,39 @@ class LibraryService {
             .map((item) => {
             const exists = Boolean(item.path && fs.existsSync(item.path));
             let modifiedAt = 0;
+            let sizeBytes = item.sizeBytes || 0;
+            let brokenCount = 0;
+            let okMediaCount = 0;
+            let downloadedAt = item.downloadedAt;
             if (exists) {
                 try {
                     modifiedAt = fs.statSync(item.path).mtimeMs || 0;
+                    if (!downloadedAt && modifiedAt) {
+                        downloadedAt = new Date(modifiedAt).toISOString();
+                    }
                 }
                 catch {
                     modifiedAt = 0;
                 }
+                if (scanIntegrity) {
+                    const quick = IntegrityService.quickBrokenCount(item.path);
+                    brokenCount = quick.brokenCount;
+                    okMediaCount = quick.okMediaCount;
+                    sizeBytes = quick.sizeBytes || IntegrityService.folderSizeBytes(item.path);
+                }
+                else {
+                    sizeBytes = IntegrityService.folderSizeBytes(item.path);
+                }
             }
-            return { ...item, exists, modifiedAt };
+            return {
+                ...item,
+                exists,
+                modifiedAt,
+                sizeBytes,
+                downloadedAt,
+                brokenCount,
+                okMediaCount,
+            };
         })
             .sort((a, b) => b.modifiedAt - a.modifiedAt);
     }
@@ -140,14 +181,28 @@ class LibraryService {
                 return false;
             if (id && String(entry.id) === id)
                 return true;
-            if (folder && entry.pathDownloaded && path.resolve(entry.pathDownloaded) === folder)
+            if (folder && entry.pathDownloaded && path.resolve(entry.pathDownloaded) === folder) {
                 return true;
+            }
             return false;
         };
         return {
             history: (history || []).filter((entry) => !matches(entry)),
             downloadedCourses: (downloadedCourses || []).filter((entry) => !matches(entry)),
         };
+    }
+    static formatSize(bytes) {
+        const value = Number(bytes) || 0;
+        if (value < 1024)
+            return `${value} B`;
+        const units = ["KB", "MB", "GB", "TB"];
+        let size = value;
+        let unit = -1;
+        do {
+            size /= 1024;
+            unit += 1;
+        } while (size >= 1024 && unit < units.length - 1);
+        return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
     }
 }
 module.exports = LibraryService;

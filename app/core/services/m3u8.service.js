@@ -16,56 +16,88 @@ class M3U8Service {
             return false;
         }
     }
-    _isValidM3U8Content(content) {
-        return content.startsWith("#EXTM3U");
+    static resolveUrl(baseUrl, maybeRelative) {
+        const raw = String(maybeRelative || "").trim();
+        if (!raw)
+            return "";
+        try {
+            return new URL(raw, baseUrl).href;
+        }
+        catch {
+            return raw;
+        }
     }
-    _extractUrlsAndQualities(m3u8Content) {
-        const lines = m3u8Content.split("\n");
+    static fetchHeaders() {
+        return {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Referer: "https://www.udemy.com/",
+            Origin: "https://www.udemy.com",
+        };
+    }
+    _isValidM3U8Content(content) {
+        return content.trimStart().startsWith("#EXTM3U");
+    }
+    _extractUrlsAndQualities(m3u8Content, baseUrl) {
+        const lines = m3u8Content.split(/\r?\n/);
         const urlsAndQualities = [];
         let currentResolution = null;
         let currentQuality = null;
-        lines.forEach((line) => {
+        let expectUri = false;
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line)
+                continue;
             if (line.startsWith("#EXT-X-STREAM-INF")) {
-                const match = line.match(/RESOLUTION=(\d+x\d+)/);
+                const match = line.match(/RESOLUTION=(\d+)x(\d+)/i);
                 if (match) {
-                    currentResolution = match[1];
-                    currentQuality = parseInt(match[1].split("x")[1], 10);
+                    currentResolution = `${match[1]}x${match[2]}`;
+                    currentQuality = parseInt(match[2], 10);
+                    expectUri = true;
                 }
+                continue;
             }
-            else if (line.startsWith("http") && currentResolution && currentQuality != null) {
-                urlsAndQualities.push({
-                    quality: currentQuality,
-                    resolution: currentResolution,
-                    url: line,
-                });
+            if (line.startsWith("#"))
+                continue;
+            if (expectUri && currentResolution && currentQuality != null) {
+                const absolute = M3U8Service.resolveUrl(baseUrl, line);
+                if (absolute) {
+                    urlsAndQualities.push({
+                        quality: currentQuality,
+                        resolution: currentResolution,
+                        url: absolute,
+                    });
+                }
                 currentResolution = null;
                 currentQuality = null;
+                expectUri = false;
             }
-        });
+        }
         return urlsAndQualities;
     }
     static async getFile(url, isBinary = false, maxRetries = 3) {
         let retries = 0;
+        let lastError;
         while (retries < maxRetries) {
             try {
-                const response = await fetch(url);
+                const response = await fetch(url, { headers: M3U8Service.fetchHeaders() });
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch ${isBinary ? "binary" : "text"} file: ${response.statusText}`);
+                    throw new Error(`Failed to fetch ${isBinary ? "binary" : "text"} file: ${response.status} ${response.statusText}`);
                 }
                 return isBinary ? await response.arrayBuffer() : await response.text();
             }
-            catch {
+            catch (error) {
+                lastError = error;
                 retries++;
             }
         }
-        throw new Error("Failed to load file after multiple attempts");
+        throw new Error(`Failed to load file after multiple attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
     }
     async loadPlaylist(maxRetries = 3) {
         const playlistContent = (await M3U8Service.getFile(this._m3u8Url, false, maxRetries));
         if (!this._isValidM3U8Content(playlistContent)) {
             throw new Error("Invalid M3U8 playlist content");
         }
-        this._playlist = this._extractUrlsAndQualities(playlistContent);
+        this._playlist = this._extractUrlsAndQualities(playlistContent, this._m3u8Url);
         return this._playlist;
     }
     getPlaylist() {
@@ -88,50 +120,96 @@ class M3U8Service {
             return null;
         return this._sortPlaylistByQuality(true)[0];
     }
+    static isLikelySegmentUri(line) {
+        const lower = line.toLowerCase();
+        if (lower.includes(".m3u8") || lower.startsWith("#"))
+            return false;
+        return (lower.includes(".ts") ||
+            lower.includes(".m4s") ||
+            lower.includes(".mp4") ||
+            lower.includes(".aac") ||
+            lower.startsWith("http") ||
+            lower.includes("/"));
+    }
     /**
-     * Resolves a master or media playlist into a flat list of .ts segment URLs.
+     * Resolves a master or media playlist into a flat list of segment URLs.
      */
     static async resolveSegmentUrls(playlistUrl, onQuality) {
         const playlist = (await M3U8Service.getFile(playlistUrl, false));
         if (!playlist)
             return [];
-        const lines = playlist.trim().split("\n");
-        const urlList = [];
-        lines.forEach((line) => {
-            if (line.toLowerCase().indexOf(".ts") > -1) {
-                urlList.push(line.trim());
-            }
-        });
-        if (urlList.length > 0) {
-            return urlList;
+        const upperPlaylist = playlist.toUpperCase();
+        if (upperPlaylist.includes("EXT-X-KEY") ||
+            upperPlaylist.includes("SAMPLE-AES") ||
+            upperPlaylist.includes("WIDEVINE")) {
+            throw new Error("HLS playlist is DRM-encrypted (EXT-X-KEY)");
         }
-        if (playlist.indexOf("m3u8") < 0) {
-            return [];
+        const lines = playlist
+            .trim()
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+        const mediaSegments = [];
+        let pendingMapUri = null;
+        for (const line of lines) {
+            if (line.startsWith("#EXT-X-MAP:")) {
+                const match = line.match(/URI="([^"]+)"/i) || line.match(/URI=([^,]+)/i);
+                if (match?.[1]) {
+                    pendingMapUri = M3U8Service.resolveUrl(playlistUrl, match[1].trim());
+                }
+                continue;
+            }
+            if (line.startsWith("#"))
+                continue;
+            if (line.toLowerCase().includes(".m3u8"))
+                continue;
+            if (M3U8Service.isLikelySegmentUri(line)) {
+                if (pendingMapUri) {
+                    mediaSegments.push(pendingMapUri);
+                    pendingMapUri = null;
+                }
+                mediaSegments.push(M3U8Service.resolveUrl(playlistUrl, line));
+            }
+        }
+        if (mediaSegments.length > 0) {
+            return mediaSegments;
         }
         let maximumQuality = 0;
         let maximumQualityPlaylistUrl = null;
-        let getUrl = false;
+        let expectVariantUri = false;
+        let pendingQuality = 0;
         for (const line of lines) {
-            if (getUrl) {
-                maximumQualityPlaylistUrl = line.trim();
-                getUrl = false;
-            }
-            const upper = line.toUpperCase();
-            if (upper.indexOf("EXT-X-STREAM-INF") > -1 && upper.indexOf("RESOLUTION") > -1) {
-                try {
-                    const readQuality = parseInt(line.split("RESOLUTION=")[1].split("X")[1].split(",")[0], 10) || 0;
-                    if (readQuality > maximumQuality) {
-                        maximumQuality = readQuality;
-                        getUrl = true;
+            if (line.startsWith("#EXT-X-STREAM-INF")) {
+                expectVariantUri = false;
+                pendingQuality = 0;
+                const upper = line.toUpperCase();
+                if (upper.includes("RESOLUTION")) {
+                    try {
+                        const readQuality = parseInt(line.split(/RESOLUTION=/i)[1].split(/x/i)[1].split(",")[0], 10) || 0;
+                        pendingQuality = readQuality;
+                        expectVariantUri = true;
+                    }
+                    catch {
+                        /* ignore malformed tags */
                     }
                 }
-                catch {
-                    /* ignore malformed tags */
+                continue;
+            }
+            if (line.startsWith("#"))
+                continue;
+            if (expectVariantUri) {
+                const absolute = M3U8Service.resolveUrl(playlistUrl, line);
+                if (pendingQuality >= maximumQuality && absolute) {
+                    maximumQuality = pendingQuality;
+                    maximumQualityPlaylistUrl = absolute;
                 }
+                expectVariantUri = false;
+                pendingQuality = 0;
             }
         }
-        if (maximumQuality > 0 && maximumQualityPlaylistUrl) {
-            onQuality?.(maximumQuality);
+        if (maximumQualityPlaylistUrl) {
+            if (maximumQuality > 0)
+                onQuality?.(maximumQuality);
             return M3U8Service.resolveSegmentUrls(maximumQualityPlaylistUrl, onQuality);
         }
         return [];

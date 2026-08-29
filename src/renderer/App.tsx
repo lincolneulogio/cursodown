@@ -6,6 +6,7 @@ import { getUdeler } from "./hooks/useUdeler";
 import { useI18n } from "./hooks/useI18n";
 import { AboutPage } from "./pages/AboutPage";
 import { CoursesPage } from "./pages/CoursesPage";
+import { DashboardPage } from "./pages/DashboardPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { LoggerPage } from "./pages/LoggerPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -19,13 +20,24 @@ interface QueueStatus {
 	concurrency: number;
 }
 
-function applyThemeFromSettings() {
+function applyAppearanceFromSettings() {
 	const api = getUdeler();
-	const theme = api?.settings.getSnapshot().theme === "light" ? "light" : "dark";
+	const snapshot = api?.settings.getSnapshot();
+	const theme = snapshot?.theme === "light" ? "light" : "dark";
+	const density = snapshot?.uiDensity === "compact" ? "compact" : "comfortable";
 	document.documentElement.classList.toggle("dark", theme === "dark");
 	document.documentElement.classList.toggle("light", theme === "light");
 	document.documentElement.setAttribute("data-theme", theme);
+	document.documentElement.setAttribute("data-density", density);
 }
+
+const SECTION_BY_DIGIT: Record<string, NavSection> = {
+	"1": "courses",
+	"2": "library",
+	"3": "dashboard",
+	"4": "settings",
+	"5": "logger",
+};
 
 export default function App() {
 	const { t } = useI18n();
@@ -34,6 +46,7 @@ export default function App() {
 	const [user, setUser] = useState<SessionUser | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [busyMessage, setBusyMessage] = useState<string | undefined>();
+	const [shortcutsOpen, setShortcutsOpen] = useState(false);
 	const [queue, setQueue] = useState<QueueStatus>({
 		running: 0,
 		pending: 0,
@@ -52,7 +65,7 @@ export default function App() {
 	}, []);
 
 	useEffect(() => {
-		applyThemeFromSettings();
+		applyAppearanceFromSettings();
 		const api = getUdeler();
 		if (!api) {
 			setView("login");
@@ -86,11 +99,55 @@ export default function App() {
 			api.downloads.saveHistory();
 		});
 
+		const restored = api.downloads.restoreQueue?.();
+		if (restored && restored.restored > 0) {
+			refreshQueue();
+		}
+
 		return () => {
 			cancelled = true;
 			unsubSave();
 		};
 	}, [onBusy, refreshQueue, t]);
+
+	useEffect(() => {
+		if (view !== "dashboard") return;
+
+		const onKey = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null;
+			const tag = target?.tagName?.toLowerCase();
+			const typing =
+				tag === "input" ||
+				tag === "textarea" ||
+				tag === "select" ||
+				target?.isContentEditable;
+
+			if (event.key === "?" && !typing) {
+				event.preventDefault();
+				setShortcutsOpen((open) => !open);
+				return;
+			}
+			if (event.key === "Escape") {
+				setShortcutsOpen(false);
+				return;
+			}
+			if (typing || event.ctrlKey || event.metaKey || event.altKey) return;
+
+			const next = SECTION_BY_DIGIT[event.key];
+			if (next) {
+				event.preventDefault();
+				setSection(next);
+				return;
+			}
+			if (event.key.toLowerCase() === "d") {
+				event.preventDefault();
+				setSection("dashboard");
+			}
+		};
+
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [view]);
 
 	const handleLogout = () => {
 		const api = getUdeler();
@@ -106,6 +163,7 @@ export default function App() {
 		setView("dashboard");
 		setSection("courses");
 		refreshQueue();
+		applyAppearanceFromSettings();
 	};
 
 	if (view === "boot") {
@@ -130,16 +188,72 @@ export default function App() {
 				onNavigate={setSection}
 				onLogout={handleLogout}
 			/>
-			<main className="min-h-0 flex-1 overflow-y-auto p-5 md:p-8">
+			<main className="ud-main min-h-0 flex-1 overflow-y-auto">
 				{section === "courses" && (
 					<CoursesPage onBusy={onBusy} onQueueChange={refreshQueue} />
 				)}
 				{section === "library" && <LibraryPage onBusy={onBusy} />}
-				{section === "settings" && <SettingsPage onBusy={onBusy} />}
+				{section === "dashboard" && (
+					<DashboardPage onOpenLibrary={() => setSection("library")} />
+				)}
+				{section === "settings" && (
+					<SettingsPage
+						onBusy={onBusy}
+						onAppearanceChange={applyAppearanceFromSettings}
+					/>
+				)}
 				{section === "logger" && <LoggerPage />}
 				{section === "about" && <AboutPage />}
 			</main>
 			<BusyOverlay visible={busy} message={busyMessage} />
+
+			{shortcutsOpen ? (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+					role="dialog"
+					aria-modal="true"
+				>
+					<div className="w-full max-w-md rounded-2xl border border-ud-border bg-ud-elevated p-5 shadow-2xl">
+						<div className="mb-3 flex items-center justify-between gap-2">
+							<h3 className="text-base font-semibold">{t("Keyboard shortcuts")}</h3>
+							<button
+								type="button"
+								onClick={() => setShortcutsOpen(false)}
+								className="rounded-lg border border-ud-border px-2 py-1 text-xs hover:bg-ud-muted"
+							>
+								Esc
+							</button>
+						</div>
+						<ul className="space-y-2 text-sm text-ud-text-muted">
+							<li>
+								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">1</kbd>{" "}
+								{t("Courses")}
+							</li>
+							<li>
+								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">2</kbd>{" "}
+								{t("Library")}
+							</li>
+							<li>
+								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">3</kbd> /{" "}
+								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">D</kbd>{" "}
+								{t("Dashboard")}
+							</li>
+							<li>
+								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">4</kbd>{" "}
+								{t("Settings")}
+							</li>
+							<li>
+								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">5</kbd>{" "}
+								{t("Logger")}
+							</li>
+							<li>
+								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">?</kbd>{" "}
+								{t("Show this help")}
+							</li>
+						</ul>
+					</div>
+				</div>
+			) : null}
 		</div>
 	);
 }

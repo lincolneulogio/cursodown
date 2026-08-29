@@ -101,10 +101,6 @@ body .dialog-widget.background {
   padding: 5px 10px;
 }
 
-.ui.dashboard > .content .about .donate-button {
-  text-align: center;
-}
-
 .ui.dashboard > .content .ui.downloads.section .ui.courses.segment {
   padding-bottom: 30px;
 }

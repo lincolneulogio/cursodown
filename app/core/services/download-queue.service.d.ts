@@ -1,7 +1,7 @@
 import type { DownloadQueueStatus } from "./types";
 /**
  * Limits how many course downloads run at the same time.
- * Concurrency is clamped to 1–3 to avoid Udemy 429 responses.
+ * Concurrency is clamped to 1–4 to balance speed and Udemy rate limits.
  */
 declare class DownloadQueue {
     #private;

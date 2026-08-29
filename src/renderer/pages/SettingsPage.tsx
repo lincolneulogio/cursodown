@@ -22,11 +22,16 @@ interface DownloadFormState {
 	autoRetry: boolean;
 	skipExistingFiles: boolean;
 	maxConcurrentDownloads: number;
+	bandwidthLimitKbps: number;
+	folderLayout: "course" | "instructor";
+	exportIndexOnComplete: boolean;
 }
 
 interface SettingsFormState {
 	language: string;
 	theme: ThemeMode;
+	notificationsEnabled: boolean;
+	uiDensity: "compact" | "comfortable";
 	download: DownloadFormState;
 }
 
@@ -59,6 +64,8 @@ function snapshotToForm(snapshot: AppSettingsSnapshot): SettingsFormState {
 	return {
 		language: snapshot.language || "Español",
 		theme: snapshot.theme === "light" ? "light" : "dark",
+		notificationsEnabled: snapshot.notificationsEnabled !== false,
+		uiDensity: snapshot.uiDensity === "compact" ? "compact" : "comfortable",
 		download: {
 			checkNewVersion: asBoolean(d.checkNewVersion, true),
 			defaultSubtitle: asString(d.defaultSubtitle, ""),
@@ -74,7 +81,10 @@ function snapshotToForm(snapshot: AppSettingsSnapshot): SettingsFormState {
 			seqZeroLeft: asBoolean(d.seqZeroLeft, false),
 			autoRetry: asBoolean(d.autoRetry, false),
 			skipExistingFiles: asBoolean(d.skipExistingFiles, true),
-			maxConcurrentDownloads: asNumber(d.maxConcurrentDownloads, 2),
+			maxConcurrentDownloads: asNumber(d.maxConcurrentDownloads, 3),
+			bandwidthLimitKbps: asNumber(d.bandwidthLimitKbps, 0),
+			folderLayout: d.folderLayout === "instructor" ? "instructor" : "course",
+			exportIndexOnComplete: asBoolean(d.exportIndexOnComplete, true),
 		},
 	};
 }
@@ -88,9 +98,10 @@ function applyTheme(theme: ThemeMode) {
 
 interface SettingsPageProps {
 	onBusy: (busy: boolean, message?: string) => void;
+	onAppearanceChange?: () => void;
 }
 
-export function SettingsPage({ onBusy }: SettingsPageProps) {
+export function SettingsPage({ onBusy, onAppearanceChange }: SettingsPageProps) {
 	const { t, languages } = useI18n();
 	const [form, setForm] = useState<SettingsFormState | null>(null);
 	const [saved, setSaved] = useState(false);
@@ -141,6 +152,15 @@ export function SettingsPage({ onBusy }: SettingsPageProps) {
 		setForm((prev) => (prev ? { ...prev, theme } : prev));
 		applyTheme(theme);
 		getUdeler()?.settings.setTheme(theme);
+		onAppearanceChange?.();
+		setSaved(false);
+	};
+
+	const onDensityChange = (uiDensity: "compact" | "comfortable") => {
+		setForm((prev) => (prev ? { ...prev, uiDensity } : prev));
+		document.documentElement.setAttribute("data-density", uiDensity);
+		getUdeler()?.settings.setDensity?.(uiDensity);
+		onAppearanceChange?.();
 		setSaved(false);
 	};
 
@@ -153,11 +173,17 @@ export function SettingsPage({ onBusy }: SettingsPageProps) {
 			api.settings.save({
 				language: form.language,
 				theme: form.theme,
+				notificationsEnabled: form.notificationsEnabled,
+				uiDensity: form.uiDensity,
 				downloadPath: form.download.path,
 				download: { ...form.download },
 			});
+			api.notify?.setEnabled(form.notificationsEnabled);
 			api.settings.setTheme(form.theme);
+			api.settings.setDensity?.(form.uiDensity);
 			applyTheme(form.theme);
+			document.documentElement.setAttribute("data-density", form.uiDensity);
+			onAppearanceChange?.();
 			setSaved(true);
 		} finally {
 			onBusy(false);
@@ -205,6 +231,47 @@ export function SettingsPage({ onBusy }: SettingsPageProps) {
 						label={t("Dark mode")}
 						onChange={(v) => onThemeChange(v ? "dark" : "light")}
 					/>
+					<div className="space-y-2">
+						<p className="text-sm text-ud-text-muted">{t("UI density")}</p>
+						{(
+							[
+								{
+									value: "comfortable" as const,
+									title: t("Comfortable"),
+									hint: t("More spacing, easier to read"),
+								},
+								{
+									value: "compact" as const,
+									title: t("Compact"),
+									hint: t("Denser layout, more content on screen"),
+								},
+							] as const
+						).map((opt) => (
+							<label
+								key={opt.value}
+								className={[
+									"flex cursor-pointer flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-sm",
+									form.uiDensity === opt.value
+										? "border-ud-accent bg-ud-accent/10"
+										: "border-ud-border bg-ud-elevated",
+								].join(" ")}
+							>
+								<span className="flex items-center gap-2 font-medium">
+									<input
+										type="radio"
+										name="uiDensity"
+										checked={form.uiDensity === opt.value}
+										onChange={() => onDensityChange(opt.value)}
+									/>
+									{opt.title}
+								</span>
+								<span className="pl-6 text-xs text-ud-text-muted">{opt.hint}</span>
+							</label>
+						))}
+						<p className="text-xs text-ud-text-muted">
+							{t("Press ? for keyboard shortcuts")}
+						</p>
+					</div>
 					<label className="block space-y-1.5 text-sm">
 						<span className="text-ud-text-muted">{t("Language (Requires App Restart)")}</span>
 						<select
@@ -276,7 +343,7 @@ export function SettingsPage({ onBusy }: SettingsPageProps) {
 						<input
 							type="number"
 							min={1}
-							max={3}
+							max={4}
 							value={form.download.maxConcurrentDownloads}
 							onChange={(e) =>
 								updateDownload("maxConcurrentDownloads", Number(e.target.value) || 1)
@@ -285,10 +352,103 @@ export function SettingsPage({ onBusy }: SettingsPageProps) {
 						/>
 					</label>
 
+					<label className="block space-y-1.5 text-sm">
+						<span className="text-ud-text-muted">{t("Bandwidth limit")}</span>
+						<p className="text-xs text-ud-text-muted">{t("0 = unlimited. Value in KB/s.")}</p>
+						<input
+							type="number"
+							min={0}
+							step={64}
+							value={form.download.bandwidthLimitKbps}
+							onChange={(e) =>
+								updateDownload("bandwidthLimitKbps", Math.max(0, Number(e.target.value) || 0))
+							}
+							placeholder="0"
+							className="w-full rounded-lg border border-ud-border bg-ud-elevated px-3 py-2 outline-none focus:border-ud-accent"
+						/>
+						<div className="flex flex-wrap gap-2 pt-1">
+							{(
+								[
+									{ label: t("Unlimited"), value: 0 },
+									{ label: "512 KB/s", value: 512 },
+									{ label: "1 MB/s", value: 1024 },
+									{ label: "2 MB/s", value: 2048 },
+									{ label: "5 MB/s", value: 5120 },
+								] as const
+							).map((preset) => (
+								<button
+									key={preset.label}
+									type="button"
+									onClick={() => updateDownload("bandwidthLimitKbps", preset.value)}
+									className={[
+										"rounded-lg border px-2.5 py-1 text-xs",
+										form.download.bandwidthLimitKbps === preset.value
+											? "border-ud-accent bg-ud-accent/15 text-ud-accent-hover"
+											: "border-ud-border hover:bg-ud-muted",
+									].join(" ")}
+								>
+									{preset.label}
+								</button>
+							))}
+						</div>
+					</label>
+
+					<div className="space-y-2">
+						<p className="text-sm text-ud-text-muted">{t("Folder layout")}</p>
+						{(
+							[
+								{
+									value: "course" as const,
+									title: t("Course / numbered chapters"),
+									hint: t("Example: CourseName/01 Chapter/…"),
+								},
+								{
+									value: "instructor" as const,
+									title: t("By instructor"),
+									hint: t("Example: Instructor/CourseName/…"),
+								},
+							] as const
+						).map((opt) => (
+							<label
+								key={opt.value}
+								className={[
+									"flex cursor-pointer flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-sm",
+									form.download.folderLayout === opt.value
+										? "border-ud-accent bg-ud-accent/10"
+										: "border-ud-border bg-ud-elevated",
+								].join(" ")}
+							>
+								<span className="flex items-center gap-2 font-medium">
+									<input
+										type="radio"
+										name="folderLayout"
+										checked={form.download.folderLayout === opt.value}
+										onChange={() => updateDownload("folderLayout", opt.value)}
+									/>
+									{opt.title}
+								</span>
+								<span className="pl-6 text-xs text-ud-text-muted">{opt.hint}</span>
+							</label>
+						))}
+					</div>
+
 					<Toggle
 						checked={form.download.skipExistingFiles}
 						label={t("Skip files that already exist")}
 						onChange={(v) => updateDownload("skipExistingFiles", v)}
+					/>
+					<Toggle
+						checked={form.notificationsEnabled}
+						label={t("Desktop notifications")}
+						onChange={(v) => {
+							setForm((prev) => (prev ? { ...prev, notificationsEnabled: v } : prev));
+							setSaved(false);
+						}}
+					/>
+					<Toggle
+						checked={form.download.exportIndexOnComplete}
+						label={t("Export course index on complete")}
+						onChange={(v) => updateDownload("exportIndexOnComplete", v)}
 					/>
 					<Toggle
 						checked={form.download.continueDonwloadingEncrypted}
@@ -353,24 +513,56 @@ export function SettingsPage({ onBusy }: SettingsPageProps) {
 					</label>
 
 					<div className="space-y-2">
+						<p className="text-sm font-medium">{t("What to download")}</p>
+						<p className="text-xs text-ud-text-muted">
+							{t("Choose videos, attachments, subtitles, or a combination")}
+						</p>
 						{(
 							[
-								{ value: 0, label: t("Download Lectures and Attachments") },
-								{ value: 1, label: t("Download only Lectures") },
-								{ value: 2, label: t("Download only Attachments") },
+								{
+									value: 0,
+									title: t("Lectures and Attachments"),
+									hint: t("Videos plus supplementary files"),
+								},
+								{
+									value: 1,
+									title: t("Videos only"),
+									hint: t("Skip attachments; subtitles follow the toggle below"),
+								},
+								{
+									value: 2,
+									title: t("Attachments only"),
+									hint: t("Skip videos; save articles and files"),
+								},
+								{
+									value: 3,
+									title: t("Subtitles only"),
+									hint: t("Download .srt files without videos or attachments"),
+								},
 							] as const
 						).map((opt) => (
 							<label
 								key={opt.value}
-								className="flex items-center gap-2 rounded-lg border border-ud-border bg-ud-elevated px-3 py-2 text-sm"
+								className={[
+									"flex cursor-pointer flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-sm",
+									form.download.type === opt.value
+										? "border-ud-accent bg-ud-accent/10"
+										: "border-ud-border bg-ud-elevated",
+								].join(" ")}
 							>
-								<input
-									type="radio"
-									name="downloadType"
-									checked={form.download.type === opt.value}
-									onChange={() => updateDownload("type", opt.value)}
-								/>
-								{opt.label}
+								<span className="flex items-center gap-2 font-medium">
+									<input
+										type="radio"
+										name="downloadType"
+										checked={form.download.type === opt.value}
+										onChange={() => {
+											updateDownload("type", opt.value);
+											if (opt.value === 3) updateDownload("skipSubtitles", false);
+										}}
+									/>
+									{opt.title}
+								</span>
+								<span className="pl-6 text-xs text-ud-text-muted">{opt.hint}</span>
 							</label>
 						))}
 					</div>
@@ -382,7 +574,7 @@ export function SettingsPage({ onBusy }: SettingsPageProps) {
 					/>
 					<Toggle
 						checked={form.download.seqZeroLeft}
-						label={t("Enumerate download with zero left")}
+						label={t("Number chapters and lectures (01, 02…)")}
 						onChange={(v) => updateDownload("seqZeroLeft", v)}
 					/>
 					<Toggle

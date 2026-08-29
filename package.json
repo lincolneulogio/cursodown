@@ -7,8 +7,7 @@
   "type": "commonjs",
   "vars": {
     "urlHelp": "https://heliomarpm.notion.site/heliomarpm/How-to-get-an-Access-Token-b0ce5f89073c4965b47721197dcb2497",
-    "urlToggles": "https://raw.githubusercontent.com/heliomarpm/feature_toggles/main/udemy-downloader-gui.json",
-    "urlDonate": "https://www.paypal.com/donate?business=KBVHLR7Z9V7B2&no_recurring=0&currency_code=USD"
+    "urlToggles": "https://raw.githubusercontent.com/heliomarpm/feature_toggles/main/udemy-downloader-gui.json"
   },
   "repository": {
     "type": "git",
@@ -44,6 +43,7 @@
     "@sentry/electron": "4.24.0",
     "axios": "^1.7.9",
     "cookie": "^1.0.2",
+    "ffmpeg-static": "^5.3.0",
     "mt-files-downloader": "github:FaisalUmair/mt-files-downloader-wrapper",
     "node-cache": "^5.1.2",
     "node-vtt-to-srt": "^1.0.1",
@@ -92,7 +92,8 @@
       "app/helpers/**/*",
       "app/locale/**/*",
       "app/assets/images/**/*",
-      "dist/renderer/**/*"
+      "dist/renderer/**/*",
+      "node_modules/ffmpeg-static/**/*"
     ],
     "directories": {
       "buildResources": "app/assets/images/build",
@@ -102,11 +103,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -128,11 +133,17 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
@@ -145,15 +156,21 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "rpm",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     }

@@ -11,6 +11,69 @@ const utils = {
 		return !isNaN(parseFloat(n)) && isFinite(n);
 	},
 
+	/**
+	 * Formats seconds as m:ss or h:mm:ss
+	 * @param {number} seconds
+	 * @returns {string}
+	 */
+	formatDuration: (seconds) => {
+		const total = Math.max(0, Math.round(Number(seconds) || 0));
+		if (total <= 0) return "";
+		const h = Math.floor(total / 3600);
+		const m = Math.floor((total % 3600) / 60);
+		const s = total % 60;
+		if (h > 0) {
+			return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+		}
+		return `${m}:${String(s).padStart(2, "0")}`;
+	},
+
+	/**
+	 * True when a Udemy video asset cannot be downloaded as clear media.
+	 * Rule: any media_license_token means Widevine/DRM — never treat as downloadable,
+	 * even if some media_sources omit "/encrypted-files" in the URL.
+	 *
+	 * @param {object|null|undefined} asset
+	 * @returns {boolean}
+	 */
+	isUdemyVideoEncrypted: (asset) => {
+		if (!asset || typeof asset !== "object") return false;
+
+		if (Boolean(asset.media_license_token)) {
+			return true;
+		}
+
+		if (asset.streams && typeof asset.streams.isEncrypted === "boolean") {
+			return Boolean(asset.streams.isEncrypted);
+		}
+
+		const streamUrls = asset.stream_urls?.Video || asset.media_sources;
+		if (!Array.isArray(streamUrls) || streamUrls.length === 0) {
+			return false;
+		}
+
+		const hasOnlyEncryptedUrls = streamUrls.every((entry) => {
+			const url = String(entry?.file || entry?.src || "");
+			return !url || url.includes("/encrypted-files");
+		});
+
+		return hasOnlyEncryptedUrls;
+	},
+
+	/**
+	 * @param {string|null|undefined} url
+	 * @returns {boolean}
+	 */
+	isEncryptedMediaUrl: (url) => {
+		const value = String(url || "").toLowerCase();
+		return (
+			value.includes("/encrypted-files") ||
+			value.includes("media_license_token") ||
+			value.includes("widevine") ||
+			value.includes("drm")
+		);
+	},
+
 	toBoolean: (value) => {
 		return utils.isNumber(value) ? !/^0$/i.test(value) : /^true$/i.test(value);
 	},

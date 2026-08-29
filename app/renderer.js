@@ -36,7 +36,15 @@
 				localeJson = require(`./locale/${file}`);
 			}
 
-			return localeJson[text] || require("./locale/es.json")[text] || text;
+			const value = localeJson[text];
+			if (typeof value === "string" && value.trim() !== "") {
+				return value;
+			}
+			const es = require("./locale/es.json")[text];
+			if (typeof es === "string" && es.trim() !== "") {
+				return es;
+			}
+			return text;
 		} catch (e) {
 			console.error(e);
 			return text;
@@ -47,17 +55,10 @@
 		document.write(translate(text));
 	}
 
-	function urlDonate() {
-		return `${pkgVars.urlDonate}&item_name=${translate(
-			"Udeler is free and without any ads. If you appreciate that, please consider donating to the Developer."
-		).replace(" ", "+")}`;
-	}
-
 	Theme.apply(Gettings.theme);
 
 	window.translate = translate;
 	window.translateWrite = translateWrite;
-	window.urlDonate = urlDonate;
 	window.pkgVars = pkgVars;
 	window.appVersion = appVersion;
 	window.Gettings = Gettings;

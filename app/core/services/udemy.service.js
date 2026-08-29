@@ -12,7 +12,7 @@ class UdemyService {
 	#urlLogin;
 	#URL_COURSES = "/users/me/subscribed-courses";
 	#URL_COURSES_ENROLL = "/users/me/subscription-course-enrollments";
-	#ASSETS_FIELDS = "&fields[asset]=asset_type,title,filename,body,captions,media_sources,stream_urls,download_urls,external_url,media_license_token";
+	#ASSETS_FIELDS = "&fields[asset]=asset_type,title,filename,body,captions,media_sources,stream_urls,download_urls,external_url,media_license_token,length";
 
 	#cache = new NodeCache({ stdTTL: 3600 }); // TTL padrão de 1 hora
 
@@ -99,14 +99,25 @@ class UdemyService {
 				if (assetType === "video" || assetType === "videomashup") {
 					const asset = el.asset;
 					const stream_urls = asset.stream_urls?.Video || asset.media_sources;
-					const isEncrypted = Boolean(asset.media_license_token);
+					const utils = require("../../helpers/utils");
+					const isEncrypted = utils.isUdemyVideoEncrypted({
+						...asset,
+						media_sources: stream_urls,
+						stream_urls: asset.stream_urls,
+					});
 					if (stream_urls) {
-						// console.log(`Preparing streams for asset id: ${asset.id}`);
 						const streams = await this._convertToStreams(stream_urls, isEncrypted, asset.title);
 
 						delete el.asset.stream_urls;
 						delete el.asset.media_sources;
 						el.asset.streams = streams;
+					} else if (isEncrypted) {
+						el.asset.streams = {
+							minQuality: null,
+							maxQuality: null,
+							isEncrypted: true,
+							sources: {},
+						};
 					}
 				} else if (assetType === "presentation") {
 					const lecture = await this.fetchLecture(courseId, el.id, true, true);
@@ -147,81 +158,120 @@ class UdemyService {
 			if (!streamUrls) {
 				throw this._error("ENO_STREAMS", "No streams found to convert");
 			}
+
+			// Strict DRM: never expose downloadable sources when the asset is encrypted.
+			if (isEncrypted) {
+				return {
+					minQuality: null,
+					maxQuality: null,
+					isEncrypted: true,
+					sources: {},
+				};
+			}
+
 			const sources = {};
 			let minQuality = Number.MAX_SAFE_INTEGER;
 			let maxQuality = Number.MIN_SAFE_INTEGER;
+			const utils = require("../../helpers/utils");
 
-			let streams = !isEncrypted ? streamUrls : streamUrls.filter((v) => !(v.file || v.src).includes("/encrypted-files"));
-			isEncrypted = isEncrypted ? streams.length === 0 : isEncrypted;
+			const streams = streamUrls.filter((v) => {
+				const url = v.file || v.src;
+				return url && !utils.isEncryptedMediaUrl(url);
+			});
 
-			streams = streams.length > 0 ? streams : streamUrls;
+			if (streams.length === 0) {
+				return {
+					minQuality: null,
+					maxQuality: null,
+					isEncrypted: true,
+					sources: {},
+				};
+			}
 
 			const promises = streams.map(async (video) => {
 				const type = video.type;
-				if (type !== "application/dash+xml") {
-					const quality = video.label.toLowerCase();
-					const url = video.file || video.src;
+				if (type === "application/dash+xml") return;
 
+				const quality = String(video.label || "auto").toLowerCase();
+				const url = video.file || video.src;
+				if (!url || utils.isEncryptedMediaUrl(url)) return;
+
+				const existing = sources[quality];
+				const preferIncoming =
+					!existing ||
+					(type === "video/mp4" && existing.type !== "video/mp4");
+				if (preferIncoming) {
 					sources[quality] = { type, url };
+				}
 
-					if (quality !== "auto") {
-						const numericQuality = parseInt(quality, 10);
-						if (!isNaN(numericQuality)) {
-							if (numericQuality < minQuality) {
-								minQuality = numericQuality;
-							}
-							if (numericQuality > maxQuality) {
-								maxQuality = numericQuality;
-							}
+				if (quality !== "auto") {
+					const numericQuality = parseInt(quality, 10);
+					if (!isNaN(numericQuality)) {
+						if (numericQuality < minQuality) {
+							minQuality = numericQuality;
 						}
-					} else {
-						// auto
-						if (!isEncrypted) {
-							const m3u8 = new M3U8Service(url);
-							// console.log('Before loading playlist');
-							const playlist = await m3u8.loadPlaylist();
-							// console.log('After loading playlist', playlist);
-
-							for (const item of playlist) {
-								// console.log(`for of playlist ${title}`, item);
-								const numericQuality = item.quality;
-
-								if (numericQuality < minQuality) {
-									minQuality = numericQuality;
-								}
-								if (numericQuality > maxQuality) {
-									maxQuality = numericQuality;
-								}
-								if (!sources[numericQuality.toString()]) {
-									sources[numericQuality.toString()] = { type, url: item.url };
-								}
-							}
-
-							// playlist.forEach(item => {
-							// const numericQuality = item.quality;
-
-							// if (numericQuality < minQuality) {
-							//     minQuality = numericQuality;
-							// }
-							// if (numericQuality > maxQuality) {
-							//     maxQuality = numericQuality;
-							// }
-							// if (!sources[numericQuality.toString()]) {
-							//     sources[numericQuality.toString()] = { type, url: item.url }
-							// }
-							// });
+						if (numericQuality > maxQuality) {
+							maxQuality = numericQuality;
 						}
 					}
+					return;
+				}
+
+				try {
+					const m3u8 = new M3U8Service(url);
+					const playlist = await m3u8.loadPlaylist();
+					for (const item of playlist) {
+						const numericQuality = item.quality;
+						if (!numericQuality || Number.isNaN(numericQuality)) continue;
+						if (utils.isEncryptedMediaUrl(item.url)) continue;
+
+						if (numericQuality < minQuality) {
+							minQuality = numericQuality;
+						}
+						if (numericQuality > maxQuality) {
+							maxQuality = numericQuality;
+						}
+
+						const key = numericQuality.toString();
+						// Keep existing progressive MP4; only fill gaps with HLS variants.
+						if (!sources[key] || sources[key].type !== "video/mp4") {
+							sources[key] = {
+								type: "application/x-mpegurl",
+								url: item.url,
+							};
+						}
+					}
+				} catch (_error) {
+					// Keep the auto entry when playlist expand fails.
 				}
 			});
 
 			await Promise.all(promises);
-			// console.log(`All stream urls converted for assetName: ${title}`);
+
+			const usableKeys = Object.keys(sources).filter((key) => sources[key]?.url);
+			if (usableKeys.length === 0) {
+				return {
+					minQuality: null,
+					maxQuality: null,
+					isEncrypted: true,
+					sources: {},
+				};
+			}
 
 			return {
-				minQuality: minQuality === Number.MAX_SAFE_INTEGER ? (sources["auto"] ? "auto" : null) : minQuality.toString(),
-				maxQuality: maxQuality === Number.MIN_SAFE_INTEGER ? (sources["auto"] ? "auto" : null) : maxQuality.toString(),
-				isEncrypted,
+				minQuality:
+					minQuality === Number.MAX_SAFE_INTEGER
+						? sources["auto"]
+							? "auto"
+							: null
+						: minQuality.toString(),
+				maxQuality:
+					maxQuality === Number.MIN_SAFE_INTEGER
+						? sources["auto"]
+							? "auto"
+							: null
+						: maxQuality.toString(),
+				isEncrypted: false,
 				sources,
 			};
 		} catch (error) {
@@ -301,7 +351,7 @@ class UdemyService {
 
 		pageSize = Math.max(pageSize, 10);
 
-		const param = `page=1&ordering=title&fields[user]=job_title&page_size=${pageSize}&search=${keyword}`;
+		const param = `page=1&ordering=title&fields[user]=job_title&fields[course]=id,title,url,published_title,image_480x270,image_240x135,visible_instructors,num_lectures,content_info,completion_ratio,last_accessed_time&page_size=${pageSize}&search=${encodeURIComponent(keyword)}`;
 		// const url = !isSubscriber ? `${this.#URL_COURSES}?${param}` : `${this.#URL_COURSES_ENROLL}?${param}`;
         const url = `${this.#URL_COURSES}?${param}`;
         const urlEnroll = `${this.#URL_COURSES_ENROLL}?${param}`;
@@ -329,7 +379,7 @@ class UdemyService {
 	async fetchCourses(pageSize = 30, isSubscriber = false, httpTimeout = this.#timeout) {
 		pageSize = Math.max(pageSize, 10);
 
-		const param = `page_size=${pageSize}&ordering=-last_accessed`;
+		const param = `page_size=${pageSize}&ordering=-last_accessed&fields[course]=id,title,url,published_title,image_480x270,image_240x135,visible_instructors,num_lectures,content_info,completion_ratio,last_accessed_time`;
 		// const url = !isSubscriber ? `${this.#URL_COURSES}?${param}` : `${this.#URL_COURSES_ENROLL}?${param}`;
         const url = `${this.#URL_COURSES}?${param}`;
         const urlEnroll = `${this.#URL_COURSES_ENROLL}?${param}`;
@@ -461,6 +511,60 @@ class UdemyService {
 		await this._prepareStreamsSource(courseId, contentData.results);
 		// console.log("fetchCourseContent", contentData);
 		return contentData;
+	}
+
+	/**
+	 * Lightweight DRM scan without preparing stream URLs.
+	 * Uses a small page size and only the fields needed for DRM detection.
+	 * @param {string|number} courseId
+	 * @param {number} [httpTimeout]
+	 * @returns {Promise<{ encryptedVideos: number, videoCount: number, totalLectures: number }>}
+	 */
+	async scanCourseDrm(courseId, httpTimeout = Math.max(this.#timeout, 60000)) {
+		const utils = require("../../helpers/utils");
+		let url =
+			`${this.#urlBase}/api-2.0/courses/${courseId}/cached-subscriber-curriculum-items` +
+			`?page_size=100&fields[lecture]=id,asset` +
+			`&fields[asset]=asset_type,media_license_token`;
+
+		let contentData = null;
+		let loadMore = false;
+		let pages = 0;
+		const MAX_PAGES = 40;
+
+		do {
+			const resp = await this.#fetchUrl(url, "GET", httpTimeout);
+			if (!contentData) {
+				contentData = resp;
+			} else {
+				contentData.results.push(...(resp.results || []));
+			}
+			pages += 1;
+			loadMore = Boolean(resp.next) && pages < MAX_PAGES;
+			if (resp.next) {
+				url = decodeURI(resp.next)
+					.replace(/%5B/g, "[")
+					.replace(/%5D/g, "]")
+					.replace(/%2C/g, ",");
+			}
+		} while (loadMore);
+
+		let encryptedVideos = 0;
+		let videoCount = 0;
+		let totalLectures = 0;
+
+		for (const item of contentData?.results || []) {
+			if (!item || item._class !== "lecture") continue;
+			totalLectures += 1;
+			const assetType = String(item.asset?.asset_type || "").toLowerCase();
+			if (!assetType.startsWith("video")) continue;
+			videoCount += 1;
+			if (utils.isUdemyVideoEncrypted(item.asset)) {
+				encryptedVideos += 1;
+			}
+		}
+
+		return { encryptedVideos, videoCount, totalLectures };
 	}
 
 	get urlBase() {

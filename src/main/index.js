@@ -1,12 +1,24 @@
-const { app, BrowserWindow, Menu, ipcMain, screen, shell, dialog } = require("electron");
-const { join } = require("path");
+const { app, BrowserWindow, Menu, ipcMain, screen, shell, dialog, Notification, protocol } = require("electron");
+const { join, normalize } = require("path");
 
 require("../../environments.js");
 
-const { version: appVersion, vars } = require("../../package.json");
+const { version: appVersion } = require("../../package.json");
 
 process.env.USER_DATA_PATH = app.getPath("userData");
 
+protocol.registerSchemesAsPrivileged([
+	{
+		scheme: "coursedown-media",
+		privileges: {
+			standard: true,
+			secure: true,
+			supportFetchAPI: true,
+			stream: true,
+			bypassCSP: true,
+		},
+	},
+]);
 const isDebug = process.argv.indexOf("--developer") !== -1;
 const useViteDev = isDebug && process.env.VITE_DEV_SERVER !== "0";
 
@@ -109,16 +121,22 @@ function createWindow() {
 					{ role: "togglefullscreen", label: "Pantalla completa" },
 				],
 			},
-			{
-				label: "Donar",
-				click: () => shell.openExternal(urlDonateWithMsg(vars.urlDonate)),
-			},
 		];
 		Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 	}
 }
 
 app.whenReady().then(() => {
+	protocol.registerFileProtocol("coursedown-media", (request, callback) => {
+		try {
+			const raw = request.url.replace(/^coursedown-media:\/\//i, "").replace(/^\/+/, "");
+			const filePath = normalize(Buffer.from(decodeURIComponent(raw), "base64").toString("utf8"));
+			callback({ path: filePath });
+		} catch (_error) {
+			callback({ error: -2 });
+		}
+	});
+
 	createWindow();
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -288,9 +306,22 @@ ipcMain.on("show-error-box", (_event, payload = {}) => {
 	dialog.showErrorBox(payload.title || "Error", payload.message || "");
 });
 
-function urlDonateWithMsg(baseUrl) {
-	return `${baseUrl}&item_name=${"CursoDown is free and without any ads. If you appreciate that, please consider donating to the Developer.".replace(
-		" ",
-		"+"
-	)}`;
-}
+ipcMain.handle("show-notification", async (_event, payload = {}) => {
+	const title = String(payload.title || "CursoDown");
+	const body = String(payload.body || "");
+	try {
+		if (!Notification.isSupported()) {
+			return { ok: false, error: "unsupported" };
+		}
+		const notification = new Notification({
+			title,
+			body,
+			silent: false,
+		});
+		notification.show();
+		return { ok: true };
+	} catch (error) {
+		return { ok: false, error: error && error.message ? error.message : String(error) };
+	}
+});
+

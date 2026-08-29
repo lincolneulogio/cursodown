@@ -79,3 +79,33 @@ body,
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+.ud-main {
+  padding: var(--ud-main-pad-y) var(--ud-main-pad-x);
+}
+
+:root,
+[data-density="comfortable"] {
+  --ud-main-pad-x: 2rem;
+  --ud-main-pad-y: 2rem;
+  --ud-card-gap: 0.75rem;
+}
+
+[data-density="compact"] {
+  --ud-main-pad-x: 1rem;
+  --ud-main-pad-y: 1rem;
+  --ud-card-gap: 0.5rem;
+}
+
+[data-density="compact"] .ud-main {
+  padding: var(--ud-main-pad-y) var(--ud-main-pad-x);
+}
+
+@media (max-width: 768px) {
+  :root,
+  [data-density="comfortable"],
+  [data-density="compact"] {
+    --ud-main-pad-x: 1.25rem;
+    --ud-main-pad-y: 1.25rem;
+  }
+}

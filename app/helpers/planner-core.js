@@ -41,4 +41,19 @@ function filterCourse(courseData, selectedKeys) {
 	};
 }
 
-module.exports = { stats, filterCourse };
+/**
+ * @param {object} courseData
+ * @param {number} chapterIndex
+ * @returns {string[]}
+ */
+function keysForChapter(courseData, chapterIndex) {
+	const keys = [];
+	const chapter = courseData?.chapters?.[chapterIndex];
+	if (!chapter) return keys;
+	(chapter.lectures || []).forEach((lecture, lectureIndex) => {
+		if (!lecture.isEncrypted) keys.push(`${chapterIndex}:${lectureIndex}`);
+	});
+	return keys;
+}
+
+module.exports = { stats, filterCourse, keysForChapter };

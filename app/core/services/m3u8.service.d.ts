@@ -4,6 +4,8 @@ declare class M3U8Service {
     private _playlist;
     constructor(m3u8Url: string);
     private static isValidUrl;
+    private static resolveUrl;
+    private static fetchHeaders;
     private _isValidM3U8Content;
     private _extractUrlsAndQualities;
     static getFile(url: string, isBinary?: boolean, maxRetries?: number): Promise<string | ArrayBuffer>;
@@ -12,8 +14,9 @@ declare class M3U8Service {
     private _sortPlaylistByQuality;
     getHighestQuality(): M3U8Variant | null;
     getLowestQuality(): M3U8Variant | null;
+    private static isLikelySegmentUri;
     /**
-     * Resolves a master or media playlist into a flat list of .ts segment URLs.
+     * Resolves a master or media playlist into a flat list of segment URLs.
      */
     static resolveSegmentUrls(playlistUrl: string, onQuality?: (quality: number) => void): Promise<string[]>;
 }

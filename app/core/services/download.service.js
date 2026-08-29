@@ -8,7 +8,32 @@ const axios = require("./http-client");
 const sanitize = require("sanitize-filename");
 const vtt2srt = require("node-vtt-to-srt");
 const Downloader = require("mt-files-downloader");
+const Download = require("mt-files-downloader/lib/Download");
 const M3U8Service = require("./m3u8.service");
+const { finalizeDownloadedMedia, isValidMediaFile } = require("../../helpers/media-finalize");
+const { resolveCoursePath } = require("../../helpers/path-template");
+const BandwidthLimiter = require("../../helpers/bandwidth-limiter");
+const { exportCourseIndex } = require("../../helpers/course-export");
+
+// mt-files-downloader ignores custom headers and always forces port 80.
+const _origSetOptions = Download.prototype.setOptions;
+Download.prototype.setOptions = function patchedSetOptions(options) {
+	_origSetOptions.call(this, options || {});
+	if (options && options.headers) {
+		this.options.headers = options.headers;
+	}
+	if (!options || options.port == null) {
+		delete this.options.port;
+	}
+	return this;
+};
+
+const MEDIA_FETCH_HEADERS = Object.freeze({
+	"User-Agent":
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	Referer: "https://www.udemy.com/",
+	Origin: "https://www.udemy.com",
+});
 
 const LABEL_COLOR_MAP = Object.freeze({
 	144: "brown",
@@ -86,7 +111,14 @@ class DownloadService extends EventEmitter {
 			translate: this.translate,
 			httpTimeout: this.httpTimeout,
 			captureException: this.captureException,
-			emit: (event, payload) => this.emit(event, { courseId: id, ...payload }),
+			emit: (event, payload) => {
+				const active = this.#sessions.get(id);
+				this.emit(event, {
+					courseId: id,
+					courseName: active?.courseName,
+					...payload,
+				});
+			},
 		});
 
 		this.#sessions.set(id, session);
@@ -180,8 +212,17 @@ class CourseDownloadSession {
 		this.downloaded = 0;
 		this.toDownload = 0;
 		this.courseName = sanitize(this.courseData.name || "course");
-		this.downloadDirectory = this.settings.downloadDirectory();
-		this.coursePath = path.join(this.downloadDirectory, this.courseName);
+		const downloadRoot = this.settings.downloadDirectory();
+		const layout = this.settings.download.folderLayout === "instructor" ? "instructor" : "course";
+		const resolved = resolveCoursePath({
+			downloadRoot,
+			courseName: this.courseData.name || this.courseName,
+			instructor: this.courseData.instructor || this.courseData.instructorName || "",
+			layout,
+		});
+		this.downloadDirectory = downloadRoot;
+		this.coursePath = resolved.coursePath;
+		this.bandwidth = new BandwidthLimiter(Number(this.settings.download.bandwidthLimitKbps) || 0);
 	}
 
 	start() {
@@ -254,7 +295,26 @@ class CourseDownloadSession {
 	}
 
 	shouldSkip(filePath) {
-		return DownloadService.shouldSkipExistingFile(filePath, this.settings.download.skipExistingFiles !== false);
+		const skip = DownloadService.shouldSkipExistingFile(
+			filePath,
+			this.settings.download.skipExistingFiles !== false
+		);
+		if (!skip) return false;
+
+		// Re-download broken "videos" that are empty HTML/playlists misnamed as .mp4
+		if (/\.(mp4|ts)$/i.test(filePath) && !isValidMediaFile(filePath)) {
+			try {
+				fs.unlinkSync(filePath);
+			} catch (_error) {}
+			const mtdPath = `${filePath}.mtd`;
+			if (fs.existsSync(mtdPath)) {
+				try {
+					fs.unlinkSync(mtdPath);
+				} catch (_error) {}
+			}
+			return false;
+		}
+		return true;
 	}
 
 	downloadChapter(chapterIndex, lectureIndex) {
@@ -281,7 +341,19 @@ class CourseDownloadSession {
 		if (this.cancelled) return;
 		try {
 			if (this.downloaded === this.toDownload) {
-				this.emit("complete", { success: true });
+				try {
+					if (this.settings.download.exportIndexOnComplete !== false) {
+						exportCourseIndex(this.courseData, this.coursePath);
+					}
+				} catch (error) {
+					this.emit("log", { title: "Export index failed", detail: error });
+				}
+				this.emit("complete", {
+					success: true,
+					pathCourse: this.coursePath,
+					courseName: this.courseName,
+					encryptedVideos: Number(this.courseData.encryptedVideos) || 0,
+				});
 				this.emit("notify", {
 					pathCourse: this.coursePath,
 					courseName: this.courseName,
@@ -302,12 +374,19 @@ class CourseDownloadSession {
 
 			const dlStart = (dl, typeVideo, callback) => {
 				if (this.cancelled) return;
-				dl.setRetryOptions({ maxRetries: 3, retryInterval: 3000 });
-				dl.setOptions({ threadsCount: 5, timeout: 5000, range: "0-100" });
+				dl.setRetryOptions({ maxRetries: 3, retryInterval: 2000 });
+				dl.setOptions({
+					threadsCount: this.bandwidth.suggestedThreads(),
+					timeout: 8000,
+					range: "0-100",
+					headers: MEDIA_FETCH_HEADERS,
+				});
 				dl.start();
 
 				let notStarted = 0;
 				let reStarted = 0;
+				let endHandled = false;
+				let lastCompletedBytes = 0;
 
 				this.timerDownloader = setInterval(() => {
 					if (this.cancelled) {
@@ -338,27 +417,42 @@ class CourseDownloadSession {
 							this.emit("speed", speedAndUnit);
 							this.emit("progress:individual", { percent: stats.total.completed });
 
-							if (dl.status === -1 && dl.stats.total.size == 0 && fs.existsSync(dl.filePath)) {
-								dl.emit("end");
-								clearInterval(this.timerDownloader);
-							} else if (dl.status === -1) {
-								this.emit("log", { title: "Download error, retrying... ", detail: { url: dl.url } });
-								axios({ timeout: this.httpTimeout, method: "HEAD", url: dl.url })
-									.then(() => {
-										this.emit("error", { error: new Error("download retry"), retryable: true });
-									})
-									.catch((error) => {
-										const statusCode = error.response?.status || 0;
-										const unlinkFile = statusCode === 401 || statusCode === 403;
+							const downloadedBytes = Number(stats.total.downloaded) || 0;
+							const instantSpeed = Number(stats.present.speed) || 0;
+							if (
+								this.bandwidth.enabled &&
+								dl.status === 1 &&
+								instantSpeed > this.bandwidth.bytesPerSec * 1.15
+							) {
+								try {
+									dl.stop();
+								} catch (_error) {}
+								const overshoot = Math.max(instantSpeed - this.bandwidth.bytesPerSec, 32 * 1024);
+								void this.bandwidth.wait(overshoot).then(() => {
+									if (!this.cancelled && dl.status !== 2 && typeof dl.resume === "function") {
 										try {
-											if (unlinkFile) fs.unlinkSync(dl.filePath);
-										} finally {
-											this.emit("error", {
-												error,
-												retryable: this.settings.download.autoRetry && !unlinkFile,
-											});
-										}
-									});
+											dl.resume();
+										} catch (_error) {}
+									}
+								});
+							}
+							lastCompletedBytes = downloadedBytes;
+
+							if (dl.status === -1) {
+								// Never treat zero-size / failed downloads as completed.
+								this.emit("log", {
+									title: "Download error",
+									detail: { url: dl.url, error: dl.error || "unknown" },
+								});
+								try {
+									if (fs.existsSync(dl.filePath) && fs.statSync(dl.filePath).size === 0) {
+										fs.unlinkSync(dl.filePath);
+									}
+								} catch (_error) {}
+								this.emit("error", {
+									error: new Error(dl.error || "download failed"),
+									retryable: Boolean(this.settings.download.autoRetry),
+								});
 								clearInterval(this.timerDownloader);
 							}
 							break;
@@ -389,6 +483,12 @@ class CourseDownloadSession {
 				});
 
 				dl.on("end", () => {
+					if (endHandled) return;
+					endHandled = true;
+					clearInterval(this.timerDownloader);
+
+					const finish = () => callback();
+
 					if (typeVideo && DownloadService.hasDRMProtection(dl)) {
 						this.courseData.encryptedVideos = Number(this.courseData.encryptedVideos || 0) + 1;
 						this.emit("drm", {
@@ -403,11 +503,39 @@ class CourseDownloadSession {
 						if (!this.settings.download.continueDonwloadingEncrypted) {
 							dl.destroy();
 							this.pause(true);
-							clearInterval(this.timerDownloader);
 							return;
 						}
+						finish();
+						return;
 					}
-					callback();
+
+					if (typeVideo) {
+						finalizeDownloadedMedia(dl.filePath)
+							.then((result) => {
+								if (result.remuxed) {
+									this.emit("log", {
+										title: "Video remuxed to playable MP4",
+										detail: result.path,
+									});
+								} else if (result.renamed) {
+									this.emit("log", {
+										title: "Video saved as .ts (open with VLC)",
+										detail: result.path,
+									});
+								}
+								if (!isValidMediaFile(result.path)) {
+									throw new Error("Downloaded file is not a valid media container");
+								}
+								finish();
+							})
+							.catch((error) => {
+								this.emit("log", { title: "Invalid downloaded video", detail: error.message });
+								this.emit("error", { error, retryable: false });
+							});
+						return;
+					}
+
+					finish();
 				});
 			};
 
@@ -475,9 +603,16 @@ class CourseDownloadSession {
 				dlStart(dl, String(attachment.type || "").includes("video"), endAttachment);
 			};
 
+			const downloadType = Number(this.settings.download.type);
+			const DownloadType = this.settings.DownloadType;
+			const onlyAttachments = downloadType === DownloadType.OnlyAttachments;
+			const onlySubtitles = downloadType === DownloadType.OnlySubtitles;
+			const onlyLectures = downloadType === DownloadType.OnlyLectures;
+			const skipAttachments = onlyLectures || onlySubtitles;
+
 			const checkAttachment = () => {
 				this.emit("progress:individual", { percent: 0 });
-				if (lectureData.attachments) {
+				if (!skipAttachments && lectureData.attachments) {
 					lectureData.attachments.sort(this.utils.dynamicSort("name"));
 					downloadAttachments(0, lectureData.attachments.length);
 				} else {
@@ -516,7 +651,9 @@ class CourseDownloadSession {
 				const vttFile = subtitleSeqName.fullPath.replace(".srt", ".vtt");
 				const vttFileWS = fs.createWriteStream(vttFile).on("finish", () => {
 					const strFileWS = fs.createWriteStream(subtitleSeqName.fullPath).on("finish", () => {
-						fs.unlinkSync(vttFile);
+						try {
+							fs.unlinkSync(vttFile);
+						} catch (_error) {}
 						checkAttachment();
 					});
 					fs.createReadStream(vttFile).pipe(vtt2srt()).pipe(strFileWS);
@@ -548,7 +685,10 @@ class CourseDownloadSession {
 
 			const endDownloadAttachment = () => {
 				clearInterval(this.timerDownloader);
-				if (this.courseData.chapters[chapterIndex].lectures[lectureIndex].subtitles) {
+				const hasSubs = Boolean(
+					this.courseData.chapters[chapterIndex].lectures[lectureIndex].subtitles
+				);
+				if (hasSubs && (!this.settings.download.skipSubtitles || onlySubtitles)) {
 					downloadSubtitle();
 				} else {
 					checkAttachment();
@@ -558,7 +698,15 @@ class CourseDownloadSession {
 			this.emit("progress:individual", { percent: 0 });
 			this.setLabelQuality(lectureData.quality || "Auto");
 
+			if (onlySubtitles) {
+				endDownloadAttachment();
+				return;
+			}
+
 			if (lectureType === "article" || lectureType === "url") {
+				if (onlyAttachments) {
+					// keep articles/html when attachments-only (treated as non-video content)
+				}
 				const articlePath = this.utils.getSequenceName(
 					lectureIndex + 1,
 					countLectures,
@@ -568,7 +716,7 @@ class CourseDownloadSession {
 				).fullPath;
 
 				if (this.shouldSkip(articlePath)) {
-					if (lectureData.attachments) {
+					if (!skipAttachments && lectureData.attachments) {
 						lectureData.attachments.sort(this.utils.dynamicSort("name"));
 						downloadAttachments(0, lectureData.attachments.length);
 					} else {
@@ -580,7 +728,7 @@ class CourseDownloadSession {
 				}
 
 				fs.writeFile(articlePath, lectureData.src, () => {
-					if (lectureData.attachments) {
+					if (!skipAttachments && lectureData.attachments) {
 						lectureData.attachments.sort(this.utils.dynamicSort("name"));
 						downloadAttachments(0, lectureData.attachments.length);
 					} else {
@@ -600,10 +748,39 @@ class CourseDownloadSession {
 				chapterDir
 			);
 
-			const skipLecture = this.settings.download.type == this.settings.DownloadType.OnlyAttachments;
+			const isHlsLecture =
+				lectureType === "application/x-mpegurl" ||
+				/\.m3u8(\?|$)/i.test(String(lectureData.src || ""));
+			const isVideoLike =
+				lectureType.includes("video") ||
+				isHlsLecture ||
+				(lectureType !== "file" && lectureType !== "article" && lectureType !== "url");
+			const skipMainMedia = onlySubtitles || (onlyAttachments && isVideoLike);
 
-			if (lectureType !== "application/x-mpegurl") {
-				if (this.shouldSkip(seqName.fullPath) || skipLecture || lectureData.isEncrypted) {
+			if (!isHlsLecture) {
+				if (lectureData.isEncrypted || this.utils.isEncryptedMediaUrl(lectureData.src)) {
+					this.emit("log", {
+						title: "Video with DRM Protection",
+						detail: `Chapter: ${chapterName}\nLecture: ${lectureName}`,
+					});
+					endDownloadAttachment();
+					return;
+				}
+
+				if (!lectureData.src) {
+					this.emit("log", {
+						title: "Missing video URL",
+						detail: `Chapter: ${chapterName}\nLecture: ${lectureName}`,
+					});
+					endDownloadAttachment();
+					return;
+				}
+
+				if (
+					skipMainMedia ||
+					this.shouldSkip(seqName.fullPath) ||
+					this.shouldSkip(seqName.fullPath.replace(/\.mp4$/i, ".ts"))
+				) {
 					endDownloadAttachment();
 					return;
 				}
@@ -618,11 +795,23 @@ class CourseDownloadSession {
 				} else {
 					dl = this.downloader.download(lectureData.src, seqName.fullPath);
 				}
-				dlStart(dl, lectureType.includes("video"), endDownloadAttachment);
+				dlStart(dl, lectureType.includes("video") || lectureType === "video", endDownloadAttachment);
 				return;
 			}
 
-			if (this.shouldSkip(seqName.fullPath) || skipLecture || lectureData.isEncrypted) {
+			if (
+				skipMainMedia ||
+				lectureData.isEncrypted ||
+				this.utils.isEncryptedMediaUrl(lectureData.src) ||
+				this.shouldSkip(seqName.fullPath) ||
+				this.shouldSkip(seqName.fullPath.replace(/\.mp4$/i, ".ts"))
+			) {
+				if (lectureData.isEncrypted || this.utils.isEncryptedMediaUrl(lectureData.src)) {
+					this.emit("log", {
+						title: "Video with DRM Protection",
+						detail: `Chapter: ${chapterName}\nLecture: ${lectureName}`,
+					});
+				}
 				endDownloadAttachment();
 				return;
 			}
@@ -650,42 +839,84 @@ class CourseDownloadSession {
 	 * @param {string} outputPath
 	 */
 	async downloadHls(playlistUrl, outputPath) {
+		if (!playlistUrl) {
+			throw new Error("Missing HLS playlist URL");
+		}
+		if (this.utils.isEncryptedMediaUrl(playlistUrl)) {
+			throw new Error("HLS URL is DRM-protected");
+		}
+
 		const list = await M3U8Service.resolveSegmentUrls(playlistUrl, (quality) => {
 			this.setLabelQuality(quality);
 		});
 
 		if (!list.length) {
-			return;
+			throw new Error("No HLS segments found for this lecture (empty playlist)");
+		}
+
+		if (list.some((url) => this.utils.isEncryptedMediaUrl(url))) {
+			throw new Error("HLS segments are DRM-protected");
 		}
 
 		this.emit("progress:individual", { percent: 0 });
-		const CHUNK_SIZE = 100;
+		const PARALLEL = this.bandwidth.suggestedParallel();
 		let count = 0;
+		let bytesWindow = 0;
+		let timeWindow = 0;
 
-		for (let i = 0; i < list.length; i += CHUNK_SIZE) {
+		if (fs.existsSync(outputPath)) {
+			fs.unlinkSync(outputPath);
+		}
+
+		for (let i = 0; i < list.length; i += PARALLEL) {
 			if (this.cancelled) return;
-			const chunk = list.slice(i, i + CHUNK_SIZE);
-			const result = [];
+			const chunk = list.slice(i, i + PARALLEL);
+			const startTime = performance.now();
 
-			for (const url of chunk) {
-				const startTime = performance.now();
-				const response = await M3U8Service.getFile(url, true);
-				const endTime = performance.now();
-				const timeDiff = (endTime - startTime) / 1000.0;
+			const buffers = await Promise.all(
+				chunk.map(async (url) => {
+					const response = await M3U8Service.getFile(url, true);
+					if (!response) {
+						throw new Error("Invalid or null HLS segment response");
+					}
+					return Buffer.from(response);
+				})
+			);
 
-				if (!response) {
-					throw new Error("Invalid or null HLS segment response");
-				}
+			const endTime = performance.now();
+			const timeDiff = Math.max((endTime - startTime) / 1000.0, 0.001);
+			const byteLength = buffers.reduce((sum, buf) => sum + buf.byteLength, 0);
+			bytesWindow += byteLength;
+			timeWindow += timeDiff;
 
-				const speedAndUnit = this.utils.getDownloadSpeed(response.byteLength / timeDiff);
-				this.emit("speed", speedAndUnit);
-				result.push(response);
-				count++;
-				this.emit("progress:individual", { percent: parseInt((count / list.length) * 100, 10) });
-			}
+			await this.bandwidth.wait(byteLength);
 
-			const buffers = result.map((segment) => Buffer.from(segment));
+			const speedAndUnit = this.utils.getDownloadSpeed(bytesWindow / Math.max(timeWindow, 0.001));
+			this.emit("speed", speedAndUnit);
+
 			fs.appendFileSync(outputPath, Buffer.concat(buffers));
+			count += chunk.length;
+			this.emit("progress:individual", { percent: parseInt((count / list.length) * 100, 10) });
+
+			if (count % (PARALLEL * 4) === 0) {
+				bytesWindow = 0;
+				timeWindow = 0;
+			}
+		}
+
+		if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size === 0) {
+			throw new Error("HLS download finished with an empty video file");
+		}
+
+		const result = await finalizeDownloadedMedia(outputPath);
+		if (result.remuxed) {
+			this.emit("log", { title: "HLS remuxed to playable MP4", detail: result.path });
+		} else if (result.renamed) {
+			this.emit("log", { title: "HLS saved as .ts (open with VLC)", detail: result.path });
+		}
+
+		if (!isValidMediaFile(result.path)) {
+			throw new Error("HLS download finished but the file is not a valid media container");
 		}
 	}
 }

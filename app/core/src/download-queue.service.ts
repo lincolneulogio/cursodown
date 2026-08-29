@@ -7,7 +7,7 @@ type QueueJob = {
 
 /**
  * Limits how many course downloads run at the same time.
- * Concurrency is clamped to 1–3 to avoid Udemy 429 responses.
+ * Concurrency is clamped to 1–4 to balance speed and Udemy rate limits.
  */
 class DownloadQueue {
 	#concurrency = 2;
@@ -20,7 +20,7 @@ class DownloadQueue {
 
 	setConcurrency(value: number): number {
 		const parsed = Number(value);
-		this.#concurrency = Number.isFinite(parsed) ? Math.min(3, Math.max(1, Math.floor(parsed))) : 2;
+		this.#concurrency = Number.isFinite(parsed) ? Math.min(4, Math.max(1, Math.floor(parsed))) : 3;
 		this.#pump();
 		return this.#concurrency;
 	}

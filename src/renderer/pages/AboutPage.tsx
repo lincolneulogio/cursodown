@@ -30,7 +30,6 @@ export function AboutPage({ embedded = false }: AboutPageProps) {
 	const { t } = useI18n();
 	const api = getUdeler();
 	const version = api?.env?.appVersion || "—";
-	const donateUrl = api?.env?.urlDonate || "";
 
 	return (
 		<div className={embedded ? "space-y-4" : "space-y-6"}>
@@ -71,16 +70,6 @@ export function AboutPage({ embedded = false }: AboutPageProps) {
 					))}
 				</div>
 			</article>
-
-			{donateUrl && (
-				<button
-					type="button"
-					onClick={() => void api?.shell.openExternal(donateUrl)}
-					className="rounded-lg border border-ud-border px-3 py-2 text-sm hover:bg-ud-muted"
-				>
-					{t("Donate")}
-				</button>
-			)}
 
 			<p className="text-xs text-ud-text-muted">
 				Electron {api?.versions.electron} · Chrome {api?.versions.chrome} · Node{" "}

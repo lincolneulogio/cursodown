@@ -13,7 +13,7 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
 var _DownloadQueue_instances, _DownloadQueue_concurrency, _DownloadQueue_pending, _DownloadQueue_running, _DownloadQueue_pump;
 /**
  * Limits how many course downloads run at the same time.
- * Concurrency is clamped to 1–3 to avoid Udemy 429 responses.
+ * Concurrency is clamped to 1–4 to balance speed and Udemy rate limits.
  */
 class DownloadQueue {
     constructor(concurrency = 2) {
@@ -25,7 +25,7 @@ class DownloadQueue {
     }
     setConcurrency(value) {
         const parsed = Number(value);
-        __classPrivateFieldSet(this, _DownloadQueue_concurrency, Number.isFinite(parsed) ? Math.min(3, Math.max(1, Math.floor(parsed))) : 2, "f");
+        __classPrivateFieldSet(this, _DownloadQueue_concurrency, Number.isFinite(parsed) ? Math.min(4, Math.max(1, Math.floor(parsed))) : 3, "f");
         __classPrivateFieldGet(this, _DownloadQueue_instances, "m", _DownloadQueue_pump).call(this);
         return __classPrivateFieldGet(this, _DownloadQueue_concurrency, "f");
     }

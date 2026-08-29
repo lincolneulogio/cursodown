@@ -84,7 +84,7 @@ const Settings = (() => {
 		autoRetry: false,
 		videoQuality: "Auto",
 		seqZeroLeft: false,
-		maxConcurrentDownloads: 2,
+		maxConcurrentDownloads: 3,
 		skipExistingFiles: true,
 	});
 

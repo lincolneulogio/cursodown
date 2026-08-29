@@ -48,6 +48,14 @@ export interface LibraryItem {
     image: string;
     exists: boolean;
     modifiedAt: number;
+    /** Folder size in bytes (0 if missing). */
+    sizeBytes: number;
+    /** ISO date when the course was last completed/saved. */
+    downloadedAt: string | null;
+    /** Media files that exist but are empty/invalid. */
+    brokenCount: number;
+    /** Playable media files found on disk. */
+    okMediaCount: number;
 }
 export interface DownloadHistoryEntry {
     id: string | number;
@@ -57,6 +65,31 @@ export interface DownloadHistoryEntry {
     selectedSubtitle?: string;
     pathDownloaded?: string;
     date?: string;
+    sizeBytes?: number;
+}
+export interface PersistentQueueItem {
+    courseId: string;
+    courseData: CourseData;
+    subtitle?: string;
+    enqueuedAt: number;
+    title?: string;
+    image?: string;
+    url?: string;
+}
+export interface IntegrityFileResult {
+    relativePath: string;
+    absolutePath: string;
+    sizeBytes: number;
+    ok: boolean;
+    reason?: string;
+}
+export interface IntegrityReport {
+    path: string;
+    ok: number;
+    broken: number;
+    missingExpected?: number;
+    totalSizeBytes: number;
+    files: IntegrityFileResult[];
 }
 export interface DownloadedCourseEntry {
     id: string | number;
@@ -85,12 +118,17 @@ export interface DownloadSettingsSlice {
     skipSubtitles?: boolean;
     defaultSubtitle?: string;
     videoQuality?: string;
+    seqZeroLeft?: boolean;
+    bandwidthLimitKbps?: number;
+    folderLayout?: "course" | "instructor";
+    exportIndexOnComplete?: boolean;
 }
 export interface SettingsLike {
     DownloadType: {
         Both: number;
         OnlyLectures: number;
         OnlyAttachments: number;
+        OnlySubtitles: number;
     };
     download: DownloadSettingsSlice;
     downloadDirectory: (courseName?: string) => string;

@@ -13,13 +13,19 @@ const DownloadType = Object.freeze({
 	Both: 0,
 	OnlyLectures: 1,
 	OnlyAttachments: 2,
+	OnlySubtitles: 3,
+});
+
+const FolderLayout = Object.freeze({
+	Course: "course",
+	Instructor: "instructor",
 });
 
 const DownloadDefaultOptions = Object.freeze({
 	checkNewVersion: true,
 	defaultSubtitle: undefined,
 	path: path.join(homedir(), "Downloads", "CursoDown"),
-	autoStartDownload: false,
+	autoStartDownload: true,
 	continueDonwloadingEncrypted: false,
 	enableDownloadStartEnd: false,
 	downloadStart: 0,
@@ -28,9 +34,15 @@ const DownloadDefaultOptions = Object.freeze({
 	skipSubtitles: false,
 	autoRetry: false,
 	videoQuality: "Auto",
-	seqZeroLeft: false,
-	maxConcurrentDownloads: 2,
+	seqZeroLeft: true,
+	maxConcurrentDownloads: 3,
 	skipExistingFiles: true,
+	/** 0 = unlimited. Soft cap in KB/s for media downloads. */
+	bandwidthLimitKbps: 0,
+	/** course | instructor */
+	folderLayout: FolderLayout.Course,
+	/** Write INDEX.md + index.html when a course finishes. */
+	exportIndexOnComplete: true,
 });
 
 function getByPath(obj, keyPath) {
@@ -113,6 +125,10 @@ function createSettingsStore() {
 		download: { ...DownloadDefaultOptions },
 		downloadedHistory: [],
 		downloadedCourses: [],
+		pendingDownloads: [],
+		notificationsEnabled: true,
+		uiDensity: "comfortable",
+		drmCache: {},
 	});
 
 	function ensureDefaults() {
@@ -136,6 +152,7 @@ function createSettingsStore() {
 	return {
 		DownloadType,
 		DownloadDefaultOptions,
+		FolderLayout,
 		get: (keyPath, defaultValue) => store.get(keyPath, defaultValue),
 		set: (keyPath, value) => store.set(keyPath, value),
 		get language() {
@@ -202,6 +219,31 @@ function createSettingsStore() {
 		set downloadedCourses(value) {
 			store.set("downloadedCourses", value || []);
 		},
+		get pendingDownloads() {
+			return store.get("pendingDownloads", []);
+		},
+		set pendingDownloads(value) {
+			store.set("pendingDownloads", Array.isArray(value) ? value : []);
+		},
+		get notificationsEnabled() {
+			return store.get("notificationsEnabled", true) !== false;
+		},
+		set notificationsEnabled(value) {
+			store.set("notificationsEnabled", value !== false);
+		},
+		get uiDensity() {
+			return store.get("uiDensity", "comfortable") === "compact" ? "compact" : "comfortable";
+		},
+		set uiDensity(value) {
+			store.set("uiDensity", value === "compact" ? "compact" : "comfortable");
+		},
+		get drmCache() {
+			const value = store.get("drmCache", {});
+			return value && typeof value === "object" ? value : {};
+		},
+		set drmCache(value) {
+			store.set("drmCache", value && typeof value === "object" ? value : {});
+		},
 		downloadDirectory(courseName = "") {
 			const downloadDir = store.get("download.path") || DownloadDefaultOptions.path;
 			return path.join(downloadDir, courseName || "");
@@ -218,6 +260,9 @@ function createSettingsStore() {
 				download: { ...(this.download || {}) },
 				downloadHistory: this.downloadHistory,
 				downloadedCourses: this.downloadedCourses,
+				pendingDownloads: this.pendingDownloads,
+				notificationsEnabled: this.notificationsEnabled,
+				uiDensity: this.uiDensity,
 				downloadPath: this.downloadDirectory(),
 			};
 		},
@@ -234,4 +279,4 @@ function getSettingsStore() {
 	return singleton;
 }
 
-module.exports = { createSettingsStore, getSettingsStore, DownloadType, DownloadDefaultOptions };
+module.exports = { createSettingsStore, getSettingsStore, DownloadType, DownloadDefaultOptions, FolderLayout };

@@ -81,11 +81,13 @@ npm run dev            # Vite HMR + Electron
 
 ## Releases e instaladores
 
-Los releases se publican automáticamente al crear un tag `v*`:
+Versión estable actual: **v1.0.0** (no se crean tags intermedios; se actualiza el mismo release).
+
+Los instaladores se regeneran al empujar el tag `v1.0.0` o con **Actions → Publish → Run workflow**:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag -f v1.0.0
+git push origin v1.0.0 --force
 ```
 
 Eso dispara el workflow **Publish**, que genera paquetes en:
@@ -93,10 +95,10 @@ Eso dispara el workflow **Publish**, que genera paquetes en:
 | Plataforma | Paquetes |
 | --- | --- |
 | Windows | Setup (NSIS) + Portable (x64 / ia32) |
-| macOS | DMG / app |
-| Linux | AppImage, deb, rpm, freebsd |
+| macOS | DMG / ZIP (x64 y arm64) |
+| Linux | AppImage, deb, rpm |
 
-Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases)
+Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.0)
 
 > La firma de código (auto-update) requiere configuración propia. Ver [electron-builder code signing](https://www.electron.build/code-signing).
 
