@@ -21,7 +21,7 @@
   "license": "MIT",
   "author": {
     "name": "Lincol Eulogio Huanca",
-    "email": "",
+    "email": "lincolneulogio@users.noreply.github.com",
     "url": "https://github.com/lincolneulogio"
   },
   "scripts": {
@@ -77,6 +77,14 @@
     "portable": {
       "artifactName": "${productName}_Portable-v${version}_${os}-${arch}.${ext}"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "lincolneulogio",
+        "repo": "cursodown",
+        "releaseType": "release"
+      }
+    ],
     "files": [
       "main.js",
       "environments.js",
@@ -108,6 +116,7 @@
     },
     "linux": {
       "category": "Utility",
+      "maintainer": "Lincol Eulogio Huanca <lincolneulogio@users.noreply.github.com>",
       "target": [
         "AppImage",
         "deb",
