@@ -92,35 +92,6 @@ function classifyLog(title, detail) {
 	return { level: "info", category: "general" };
 }
 
-function pathToMediaUrl(filePath) {
-	const absolute = path.resolve(String(filePath || ""));
-	const encoded = encodeURIComponent(Buffer.from(absolute, "utf8").toString("base64"));
-	return `coursedown-media://${encoded}`;
-}
-
-function listPlayableMedia(folderPath) {
-	if (!folderPath || !fs.existsSync(folderPath)) return [];
-	const files = IntegrityService.walkMediaFiles(folderPath);
-	return files
-		.map((absolutePath) => {
-			let sizeBytes = 0;
-			try {
-				sizeBytes = fs.statSync(absolutePath).size;
-			} catch {
-				sizeBytes = 0;
-			}
-			return {
-				path: absolutePath,
-				name: path.relative(folderPath, absolutePath).split(path.sep).join("/"),
-				url: pathToMediaUrl(absolutePath),
-				sizeBytes,
-				ok: sizeBytes > 0 && IntegrityService.inspectFile(absolutePath).ok,
-			};
-		})
-		.filter((item) => item.ok)
-		.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-}
-
 function loadEsFallback() {
 	try {
 		localeEsFallback = JSON.parse(
@@ -231,6 +202,7 @@ function recordDownloadHistory(payload = {}) {
 		pathDownloaded,
 		date: new Date().toISOString(),
 		sizeBytes,
+		image: payload.image || "",
 	};
 
 	const history = (Settings.downloadHistory || []).filter((item) => String(item.id) !== id);
@@ -255,6 +227,17 @@ function recordDownloadHistory(payload = {}) {
 		url: payload.url || (idx >= 0 ? mapped[idx].url : ""),
 	};
 	Settings.downloadedCourses = [nextCourse, ...mapped.filter((c) => String(c.id) !== id)];
+
+	if (pathDownloaded) {
+		try {
+			LibraryService.writeFolderMeta(pathDownloaded, {
+				id,
+				name: entry.name,
+				title: entry.name,
+				image: nextCourse.image || "",
+			});
+		} catch (_error) {}
+	}
 }
 
 function showToast(title, body) {
@@ -808,13 +791,77 @@ const udelerApi = {
 		},
 	},
 	library: {
-		list: (options = {}) =>
-			LibraryService.list(
+		list: (options = {}) => {
+			const items = LibraryService.list(
 				Settings.downloadDirectory(),
 				Settings.downloadHistory,
 				Settings.downloadedCourses || [],
 				{ scanIntegrity: options.scanIntegrity !== false }
-			),
+			);
+			const downloaded = Settings.downloadedCourses || [];
+			const normalize = (value) =>
+				String(value || "")
+					.toLowerCase()
+					.trim()
+					.replace(/\s+/g, " ");
+
+			const enriched = items.map((item) => {
+				const itemPath = item.path ? path.resolve(item.path) : "";
+				const itemName = normalize(item.name);
+				const baseName = itemPath ? normalize(path.basename(itemPath)) : "";
+				const parentName = itemPath
+					? normalize(path.basename(path.dirname(itemPath)))
+					: "";
+
+				const match = downloaded.find((course) => {
+					if (!course) return false;
+					if (String(course.id) === String(item.id)) return true;
+					const coursePath = course.pathDownloaded
+						? path.resolve(String(course.pathDownloaded))
+						: "";
+					if (itemPath && coursePath && itemPath === coursePath) return true;
+					const title = normalize(course.title || course.name);
+					if (title && (title === itemName || title === baseName)) return true;
+					const instructor = normalize(course.instructor || "");
+					if (instructor && (instructor === itemName || instructor === parentName) && title === baseName) {
+						return true;
+					}
+					return false;
+				});
+
+				if (!match) return item;
+				const image = match.image || item.image || "";
+				const betterName = match.title || match.name || item.name;
+				if ((image || betterName) && itemPath) {
+					try {
+						LibraryService.writeFolderMeta(itemPath, {
+							id: match.id,
+							name: betterName,
+							image,
+						});
+					} catch (_error) {}
+				}
+				return {
+					...item,
+					id: item.id.startsWith("folder:") ? String(match.id) : item.id,
+					name: betterName || item.name,
+					image,
+					instructor: match.instructor || item.instructor || "",
+				};
+			});
+
+			for (const item of enriched) {
+				if (!item?.exists || !item.path || !item.image) continue;
+				try {
+					LibraryService.writeFolderMeta(item.path, {
+						id: item.id,
+						name: item.name,
+						image: item.image,
+					});
+				} catch (_error) {}
+			}
+			return enriched;
+		},
 		remove: (id, folderPath) => {
 			const removed = LibraryService.removeFolder(Settings.downloadDirectory(), folderPath);
 			const next = LibraryService.forget(
@@ -829,6 +876,10 @@ const udelerApi = {
 		verify: (folderPath) => IntegrityService.verifyFolder(folderPath),
 		removeBroken: (folderPath) => IntegrityService.removeBroken(folderPath),
 		formatSize: (bytes) => LibraryService.formatSize(bytes),
+		writeMeta: (folderPath, meta = {}) => {
+			LibraryService.writeFolderMeta(folderPath, meta || {});
+			return true;
+		},
 		exportIndex: (folderPath, courseData = null) => {
 			const data =
 				courseData && Array.isArray(courseData.chapters)
@@ -932,10 +983,6 @@ const udelerApi = {
 			fs.writeFileSync(result.filePath, content || "(empty)", "utf8");
 			return { ok: true, path: result.filePath };
 		},
-	},
-	media: {
-		toUrl: (filePath) => pathToMediaUrl(filePath),
-		listInFolder: (folderPath) => listPlayableMedia(folderPath),
 	},
 	dashboard: {
 		getSnapshot: () => getDashboardSnapshot(),

@@ -1,4 +1,4 @@
-export type NavSection = "courses" | "library" | "dashboard" | "settings" | "logger" | "about";
+export type NavSection = "courses" | "library" | "dashboard" | "settings";
 
 export type CoursesTab = "catalog" | "downloads";
 
@@ -101,14 +101,6 @@ export interface LogEntry {
 	category?: string;
 }
 
-export interface MediaListItem {
-	path: string;
-	name: string;
-	url: string;
-	sizeBytes: number;
-	ok: boolean;
-}
-
 export interface LibraryListItem {
 	id: string;
 	name: string;
@@ -122,6 +114,9 @@ export interface LibraryListItem {
 	downloadedAt: string | null;
 	brokenCount: number;
 	okMediaCount: number;
+	instructor?: string;
+	duration?: string;
+	lectureCount?: number;
 }
 
 export interface IntegrityReport {
@@ -261,6 +256,18 @@ export interface UdelerBridge {
 		verify: (folderPath: string) => IntegrityReport;
 		removeBroken: (folderPath: string) => { removed: number; report: IntegrityReport };
 		formatSize: (bytes: number) => string;
+		writeMeta: (
+			folderPath: string,
+			meta: {
+				id?: string | number;
+				name?: string;
+				title?: string;
+				image?: string;
+				instructor?: string;
+				duration?: string;
+				lectureCount?: number;
+			}
+		) => boolean;
 		exportIndex: (
 			folderPath: string,
 			courseData?: { name?: string; chapters?: unknown[] } | null
@@ -309,10 +316,6 @@ export interface UdelerBridge {
 		clear: () => void;
 		append: (title: string, detail?: unknown, meta?: { level?: string; category?: string }) => void;
 		export: () => Promise<{ ok: boolean; canceled?: boolean; path?: string }>;
-	};
-	media: {
-		toUrl: (filePath: string) => string;
-		listInFolder: (folderPath: string) => MediaListItem[];
 	};
 	dashboard: {
 		getSnapshot: () => DashboardSnapshot;

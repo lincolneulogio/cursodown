@@ -203,6 +203,9 @@
   "Size": "",
   "Date": "",
   "Playable": "",
+  "Classes": "",
+  "Duration": "",
+  "Instructor": "",
   "Broken": "",
   "Broken lessons": "",
   "Verify integrity": "",
@@ -281,5 +284,13 @@
   "All categories": "",
   "General": "",
   "Checking DRM": "",
-  "DRM check failed": ""
+  "DRM check failed": "",
+  "Appearance": "",
+  "Theme": "",
+  "Light": "",
+  "Dark": "",
+  "Theme, density and language for the interface": "",
+  "Path, quality, bandwidth and folder structure": "",
+  "Download behavior": "",
+  "Save your changes when ready": ""
 }

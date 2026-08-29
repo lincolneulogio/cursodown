@@ -1,5 +1,5 @@
-const { app, BrowserWindow, Menu, ipcMain, screen, shell, dialog, Notification, protocol } = require("electron");
-const { join, normalize } = require("path");
+const { app, BrowserWindow, Menu, ipcMain, screen, shell, dialog, Notification } = require("electron");
+const { join } = require("path");
 
 require("../../environments.js");
 
@@ -16,18 +16,6 @@ if (process.platform === "win32") {
 	app.setAppUserModelId(app.isPackaged ? pkg.build?.appId || "com.lincol.cursodown" : displayName);
 }
 
-protocol.registerSchemesAsPrivileged([
-	{
-		scheme: "coursedown-media",
-		privileges: {
-			standard: true,
-			secure: true,
-			supportFetchAPI: true,
-			stream: true,
-			bypassCSP: true,
-		},
-	},
-]);
 const isDebug = process.argv.indexOf("--developer") !== -1;
 const useViteDev = isDebug && process.env.VITE_DEV_SERVER !== "0";
 
@@ -56,8 +44,9 @@ function createWindow() {
 		title: `CursoDown | Descargador de cursos Udemy - v${appVersion}`,
 		minWidth: 760,
 		minHeight: 560,
-		width: 960,
-		height: size.height - 150,
+		width: size.width,
+		height: size.height,
+		show: false,
 		icon: join(__dirname, "../../app/assets/images/build/icon.png"),
 		resizable: true,
 		maximizable: true,
@@ -71,6 +60,8 @@ function createWindow() {
 	});
 
 	mainWindow = win;
+	win.maximize();
+	win.show();
 
 	win.webContents.setWindowOpenHandler(({ url }) => {
 		if (/^https?:/i.test(url)) shell.openExternal(url);
@@ -136,16 +127,6 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-	protocol.registerFileProtocol("coursedown-media", (request, callback) => {
-		try {
-			const raw = request.url.replace(/^coursedown-media:\/\//i, "").replace(/^\/+/, "");
-			const filePath = normalize(Buffer.from(decodeURIComponent(raw), "base64").toString("utf8"));
-			callback({ path: filePath });
-		} catch (_error) {
-			callback({ error: -2 });
-		}
-	});
-
 	const { registerAutoUpdate } = require("./auto-update");
 	registerAutoUpdate({
 		getMainWindow: () => mainWindow,

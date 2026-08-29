@@ -102,15 +102,15 @@ export function LoginPage({ onLoggedIn, onBusy }: LoginPageProps) {
 	};
 
 	return (
-		<div className="flex min-h-full items-center justify-center bg-ud-bg px-4 py-10">
-			<div className="w-full max-w-md rounded-2xl border border-ud-border bg-ud-elevated p-8 shadow-xl">
+		<div className="flex min-h-full items-center justify-center px-4 py-10">
+			<div className="w-full max-w-md rounded-2xl border border-ud-border bg-ud-elevated p-8">
 				<div className="mb-8 text-center">
 					<img
 						src={logoUrl}
 						alt="CursoDown"
 						className="mx-auto mb-4 h-14 w-14 object-contain"
 					/>
-					<h1 className="text-2xl font-semibold tracking-tight">CursoDown</h1>
+					<h1 className="text-2xl font-semibold tracking-tight text-ud-text">CursoDown</h1>
 					<p className="mt-2 text-sm text-ud-text-muted">
 						{t("Sign in with your enrolled Udemy account")}
 					</p>

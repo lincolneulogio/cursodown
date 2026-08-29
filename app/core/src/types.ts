@@ -63,6 +63,10 @@ export interface LibraryItem {
 	brokenCount: number;
 	/** Playable media files found on disk. */
 	okMediaCount: number;
+	instructor?: string;
+	duration?: string;
+	/** Official lecture count from Udemy / course-meta (not disk media count). */
+	lectureCount?: number;
 }
 
 export interface DownloadHistoryEntry {
@@ -74,6 +78,7 @@ export interface DownloadHistoryEntry {
 	pathDownloaded?: string;
 	date?: string;
 	sizeBytes?: number;
+	image?: string;
 }
 
 export interface PersistentQueueItem {

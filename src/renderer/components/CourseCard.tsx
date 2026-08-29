@@ -34,13 +34,13 @@ interface CourseCardProps {
 
 const STATUS_STYLES: Record<CourseLocalStatus, string> = {
 	idle: "bg-ud-muted text-ud-text-muted",
-	queued: "bg-amber-500/20 text-amber-200",
-	downloading: "bg-ud-accent/20 text-ud-accent-hover",
-	paused: "bg-ud-muted text-ud-text-muted",
-	downloaded: "bg-emerald-500/20 text-emerald-300",
-	partial: "bg-sky-500/20 text-sky-200",
-	error: "bg-rose-500/20 text-rose-300",
-	missing: "bg-rose-500/15 text-rose-200",
+	queued: "bg-amber-500 text-white",
+	downloading: "bg-ud-accent text-white",
+	paused: "bg-slate-500 text-white",
+	downloaded: "bg-emerald-600 text-white",
+	partial: "bg-sky-600 text-white",
+	error: "bg-ud-danger text-white",
+	missing: "bg-ud-danger text-white",
 };
 
 function statusLabel(status: CourseLocalStatus, t: (key: string) => string): string {
@@ -139,7 +139,7 @@ function CourseCardComponent({
 					</span>
 				)}
 				{drmChecked && encrypted === 0 && (
-					<span className="absolute left-0 top-0 rounded-br-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+					<span className="absolute left-0 top-0 rounded-br-md bg-ud-ok px-1.5 py-0.5 text-[10px] font-semibold text-white">
 						{t("No DRM")}
 					</span>
 				)}
@@ -168,22 +168,22 @@ function CourseCardComponent({
 								</span>
 							)}
 							{drmChecked && encrypted > 0 && (
-								<span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-medium text-rose-300">
+								<span className="rounded-full bg-ud-danger px-2 py-0.5 text-[10px] font-semibold text-white">
 									{t("With DRM")}
 								</span>
 							)}
 							{drmChecked && encrypted === 0 && (
-								<span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+								<span className="rounded-full bg-ud-ok px-2 py-0.5 text-[10px] font-semibold text-white">
 									{t("No DRM")}
 								</span>
 							)}
 							{!drmChecked && course.drmFailed && (
-								<span className="rounded-full bg-ud-warning/20 px-2 py-0.5 text-[10px] font-medium text-ud-warning">
+								<span className="rounded-full bg-ud-warning px-2 py-0.5 text-[10px] font-semibold text-black">
 									{t("DRM check failed")}
 								</span>
 							)}
 							{!drmChecked && !course.drmFailed && (
-								<span className="rounded-full bg-ud-muted px-2 py-0.5 text-[10px] font-medium text-ud-text-muted">
+								<span className="rounded-full bg-slate-600 px-2 py-0.5 text-[10px] font-semibold text-white">
 									{t("Checking DRM")}…
 								</span>
 							)}
@@ -234,7 +234,7 @@ function CourseCardComponent({
 							<button
 								type="button"
 								onClick={() => onCancel(course)}
-								className="rounded-lg border border-rose-400/60 bg-transparent px-3 py-1.5 text-xs font-medium text-rose-300 hover:border-rose-300 hover:bg-white/10 hover:text-rose-100"
+								className="rounded-lg border border-ud-danger/50 bg-transparent px-3 py-1.5 text-xs font-medium text-ud-danger hover:bg-ud-danger/10"
 							>
 								{t("Cancel")}
 							</button>

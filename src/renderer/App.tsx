@@ -5,11 +5,9 @@ import { Sidebar } from "./components/Sidebar";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { getUdeler } from "./hooks/useUdeler";
 import { useI18n } from "./hooks/useI18n";
-import { AboutPage } from "./pages/AboutPage";
 import { CoursesPage } from "./pages/CoursesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LibraryPage } from "./pages/LibraryPage";
-import { LoggerPage } from "./pages/LoggerPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
@@ -49,7 +47,6 @@ const SECTION_BY_DIGIT: Record<string, NavSection> = {
 	"2": "library",
 	"3": "dashboard",
 	"4": "settings",
-	"5": "logger",
 };
 
 export default function App() {
@@ -235,7 +232,7 @@ export default function App() {
 	}
 
 	return (
-		<div className="flex h-full min-h-0 flex-col bg-ud-bg text-ud-text">
+		<div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-ud-bg text-ud-text">
 			{showUpdateBanner ? (
 				<UpdateBanner
 					status={updateStatus}
@@ -244,7 +241,7 @@ export default function App() {
 					onDismiss={() => setUpdateDismissed(true)}
 				/>
 			) : null}
-			<div className="flex min-h-0 flex-1">
+			<div className="flex min-h-0 flex-1 overflow-hidden">
 				<Sidebar
 					active={section}
 					user={user}
@@ -266,8 +263,6 @@ export default function App() {
 							onAppearanceChange={applyAppearanceFromSettings}
 						/>
 					)}
-					{section === "logger" && <LoggerPage />}
-					{section === "about" && <AboutPage />}
 				</main>
 			</div>
 			<BusyOverlay visible={busy} message={busyMessage} />
@@ -306,10 +301,6 @@ export default function App() {
 							<li>
 								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">4</kbd>{" "}
 								{t("Settings")}
-							</li>
-							<li>
-								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">5</kbd>{" "}
-								{t("Logger")}
 							</li>
 							<li>
 								<kbd className="rounded bg-ud-muted px-1.5 py-0.5 text-ud-text">?</kbd>{" "}
