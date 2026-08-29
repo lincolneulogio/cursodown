@@ -61,12 +61,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libarchive-tools rpm
 
+      - name: Install dependencies (retry on CDN flakes)
+        shell: bash
+        run: |
+          for i in 1 2 3 4 5; do
+            if npm ci; then
+              exit 0
+            fi
+            echo "npm ci failed (attempt $i); retrying in $((i * 20))s…"
+            sleep $((i * 20))
+          done
+          exit 1
+
       - name: Install macOS DMG license helper
         if: runner.os == 'macOS'
-        run: npm install dmg-license --no-save
-
-      - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          for i in 1 2 3; do
+            if npm install dmg-license --no-save; then
+              exit 0
+            fi
+            echo "dmg-license install failed (attempt $i); retrying…"
+            sleep $((i * 15))
+          done
+          exit 1
 
       - name: Build core + renderer
         run: |
@@ -76,9 +94,11 @@ jobs:
       - name: Build Electron packages
         uses: heliomarpm/action-electron-builder@2.1
         with:
+          # Already built above; avoid double electron-builder via npm run build.
+          skip_build: true
           # Windows: x64+ia32 in ONE publish so latest.yml sha512 matches the uploaded Setup.
           args: ${{ runner.os == 'Windows' && '-w --x64 --ia32' || '' }}
-          max_attempts: 3
+          max_attempts: 5
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: true
 
@@ -91,8 +111,6 @@ jobs:
           TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
           gh release upload "$TAG" app/build-info.json --clobber
 
-  # Keep the GitHub release as draft while matrix jobs upload assets, then publish
-  # so auto-update never sees a missing latest.yml (404).
   finalize:
     name: Publish release
     needs: publish
@@ -118,8 +136,7 @@ jobs:
           for i in 1 2 3 4 5 6 8; do
             COUNT=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '.assets | length')
             HAS_YML=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "latest.yml")) | length')
-            HAS_INFO=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "build-info.json")) | length')
-            echo "Assets=${COUNT} latest.yml=${HAS_YML} build-info=${HAS_INFO}"
+            echo "Assets=${COUNT} latest.yml=${HAS_YML}"
             if [ "${COUNT}" -ge 10 ] && [ "${HAS_YML}" != "0" ]; then
               break
             fi
