@@ -1,7 +1,7 @@
 {
   "name": "cursodown",
   "productName": "CursoDown",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "Descargador de cursos de Udemy para escritorio.",
   "main": "main.js",
   "type": "commonjs",
@@ -93,6 +93,7 @@
       "app/helpers/**/*",
       "app/locale/**/*",
       "app/assets/images/**/*",
+      "app/build-info.json",
       "dist/renderer/**/*",
       "node_modules/ffmpeg-static/**/*"
     ],

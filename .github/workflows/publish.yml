@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag a publicar (debe existir, p. ej. v1.0.2)"
+        description: "Tag estable a publicar (por defecto v1.0.0)"
         required: true
-        default: "v1.0.2"
+        default: "v1.0.0"
 
 permissions:
   contents: write
@@ -39,6 +39,21 @@ jobs:
         shell: bash
         run: |
           echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" > .env
+
+      - name: Stamp build-info.json
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const info = {
+            stableVersion: "1.0.0",
+            buildId: Number(process.env.GITHUB_RUN_NUMBER) || Date.now(),
+            releasedAt: new Date().toISOString(),
+            gitSha: process.env.GITHUB_SHA || null,
+          };
+          fs.writeFileSync("app/build-info.json", JSON.stringify(info, null, 2) + "\n");
+          console.log("Stamped build-info", info);
+          NODE
 
       - name: Install Linux packaging deps
         if: runner.os == 'Linux'
@@ -74,6 +89,15 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: true
 
+      - name: Upload build-info.json to release
+        if: runner.os == 'Linux'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          gh release upload "$TAG" app/build-info.json --clobber
+
   # Keep the GitHub release as draft while matrix jobs upload assets, then publish
   # so auto-update never sees a missing latest.yml (404).
   finalize:
@@ -98,19 +122,19 @@ jobs:
         shell: bash
         run: |
           TAG="${{ steps.tag.outputs.name }}"
-          # Wait briefly for GitHub to index uploaded assets
-          for i in 1 2 3 4 5; do
+          for i in 1 2 3 4 5 6 8; do
             COUNT=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '.assets | length')
-            echo "Assets on ${TAG}: ${COUNT}"
-            if [ "${COUNT}" -ge 10 ]; then
+            HAS_YML=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "latest.yml")) | length')
+            HAS_INFO=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "build-info.json")) | length')
+            echo "Assets=${COUNT} latest.yml=${HAS_YML} build-info=${HAS_INFO}"
+            if [ "${COUNT}" -ge 10 ] && [ "${HAS_YML}" != "0" ]; then
               break
             fi
-            sleep 15
+            sleep 20
           done
-          # Ensure required update metadata exists before making it latest
           HAS_YML=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '[.assets[].name] | map(select(. == "latest.yml")) | length')
           if [ "${HAS_YML}" = "0" ]; then
-            echo "latest.yml still missing on ${TAG}; leaving draft state if any"
+            echo "latest.yml still missing on ${TAG}"
             exit 1
           fi
           gh release edit "${TAG}" --draft=false --latest

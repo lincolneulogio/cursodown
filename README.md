@@ -81,30 +81,26 @@ npm run dev            # Vite HMR + Electron
 
 ## Releases e instaladores
 
-Versión actual en desarrollo: ver `package.json` (p. ej. **1.0.1**).
+**Politica:** una sola version estable **`1.0.0`** / tag **`v1.0.0`**.
+No se crean `v1.0.1`, `v1.0.2`, etc. salvo que se pida explicitamente.
 
-### Auto-actualización
-La app empaquetada (NSIS Setup) usa `electron-updater` contra GitHub Releases:
-1. Sube la versión en `package.json` (`1.0.1` → `1.0.2`, etc.)
-2. Publica el tag `vX.Y.Z` (dispara **Publish**)
-3. Quien ya tenga una build con auto-update verá el aviso y podrá descargar/instalar sin ir a la web
+Los cambios (grandes o pequenos) se acumulan en `main` y, cuando se pida publicar,
+se actualiza el **mismo** tag `v1.0.0` y sus instaladores.
+
+### Auto-actualizacion
+La app compara un `buildId` interno (`app/build-info.json`, estampado en CI) con el del release `v1.0.0`.
+Asi puede actualizarse aunque la version visible siga siendo 1.0.0.
 
 Notas:
-- Hace falta **subir la versión** en cada release; republicar el mismo número no dispara update.
-- El primer update automático requiere haber instalado al menos una build que ya incluya el updater.
-- En desarrollo (`npm start` / `--developer`) los updates están desactivados.
-- Firma de código en Windows mejora la experiencia (opcional). Ver [electron-builder code signing](https://www.electron.build/code-signing).
-
-Los instaladores se regeneran al empujar un tag `v*` o con **Actions → Publish → Run workflow**:
+- En desarrollo (`npm start`) los updates estan desactivados.
+- El release se sube primero como **draft** y se publica al terminar todos los OS (evita 404 de `latest.yml`).
+- Firma de codigo en Windows mejora la experiencia (opcional).
 
 ```bash
-# Ejemplo siguiente release
-# 1) bump version en package.json
-git tag v1.0.1
-git push origin v1.0.1
+# Cuando el usuario pida publicar la estable:
+git tag -f v1.0.0
+git push origin v1.0.0 --force
 ```
-
-Eso dispara el workflow **Publish**, que genera paquetes en:
 
 | Plataforma | Paquetes |
 | --- | --- |
@@ -112,7 +108,7 @@ Eso dispara el workflow **Publish**, que genera paquetes en:
 | macOS | DMG / ZIP (x64 y arm64) |
 | Linux | AppImage, deb, rpm |
 
-Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases)
+Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.0)
 
 ## CI / CD
 

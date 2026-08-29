@@ -158,6 +158,8 @@ export interface UpdateStatus {
 	percent: number;
 	error: string | null;
 	packaged: boolean;
+	buildId?: number;
+	remoteBuildId?: number | null;
 }
 
 export interface UdelerBridge {

@@ -29,6 +29,8 @@ const IDLE_UPDATE: UpdateStatus = {
 	percent: 0,
 	error: null,
 	packaged: false,
+	buildId: 0,
+	remoteBuildId: null,
 };
 
 function applyAppearanceFromSettings() {
