@@ -3,9 +3,18 @@ const { join, normalize } = require("path");
 
 require("../../environments.js");
 
-const { version: appVersion } = require("../../package.json");
+const pkg = require("../../package.json");
+const { version: appVersion } = pkg;
 
 process.env.USER_DATA_PATH = app.getPath("userData");
+
+// Windows toast / taskbar: show "CursoDown" instead of "electron.app.CursoDown".
+if (process.platform === "win32") {
+	const displayName = pkg.productName || "CursoDown";
+	app.setName(displayName);
+	// Packaged: match electron-builder appId (Start Menu). Dev: friendly label.
+	app.setAppUserModelId(app.isPackaged ? pkg.build?.appId || "com.lincol.cursodown" : displayName);
+}
 
 protocol.registerSchemesAsPrivileged([
 	{
