@@ -1,11 +1,11 @@
 "use strict";
 
 /**
- * Auto-update for a single stable release (v1.0.3).
- * Semver stays 1.0.3; newer installs are detected via buildId in build-info.json.
+ * Auto-update for the current stable release (v1.0.4).
+ * Uses Node http(s) only — Electron 22 has no net.fetch.
+ * Detects updates via semver and/or buildId in build-info.json.
  */
 
-const { autoUpdater } = require("electron-updater");
 const { ipcMain, app } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
@@ -14,7 +14,8 @@ const https = require("https");
 const path = require("path");
 const { URL } = require("url");
 
-const STABLE_TAG = "v1.0.3";
+const STABLE_TAG = "v1.0.4";
+const STABLE_VERSION = "1.0.4";
 const REPO = "lincolneulogio/cursodown";
 
 /** @typedef {"idle"|"checking"|"available"|"not-available"|"downloading"|"downloaded"|"error"} UpdatePhase */
@@ -46,7 +47,6 @@ let state = {
 let getMainWindow = null;
 let wired = false;
 let checking = false;
-let lastCheckSilent = false;
 /** @type {string | null} */
 let pendingInstallerPath = null;
 /** @type {string | null} */
@@ -56,8 +56,30 @@ function loadLocalBuildInfo() {
 	try {
 		return require("../../app/build-info.json");
 	} catch (_error) {
-		return { stableVersion: "1.0.3", buildId: 0, releasedAt: null, gitSha: null };
+		return { stableVersion: STABLE_VERSION, buildId: 0, releasedAt: null, gitSha: null };
 	}
+}
+
+/**
+ * @param {string} a
+ * @param {string} b
+ * @returns {number} 1 if a>b, -1 if a<b, 0 if equal
+ */
+function cmpSemver(a, b) {
+	const pa = String(a || "0")
+		.replace(/^v/i, "")
+		.split(".")
+		.map((n) => parseInt(n, 10) || 0);
+	const pb = String(b || "0")
+		.replace(/^v/i, "")
+		.split(".")
+		.map((n) => parseInt(n, 10) || 0);
+	for (let i = 0; i < 3; i++) {
+		const d = (pa[i] || 0) - (pb[i] || 0);
+		if (d > 0) return 1;
+		if (d < 0) return -1;
+	}
+	return 0;
 }
 
 function snapshot() {
@@ -91,6 +113,9 @@ function isTransientPublishError(message) {
 function friendlyUpdateError(err) {
 	const raw =
 		err && typeof err === "object" && "message" in err ? String(err.message) : String(err || "Update error");
+	if (/net\.fetch is not a function/i.test(raw)) {
+		return "UPDATE_NETWORK";
+	}
 	if (/latest\.ya?ml|build-info\.json|Cannot find latest|HttpError:\s*404/i.test(raw)) {
 		return "UPDATE_PUBLISHING";
 	}
@@ -179,33 +204,43 @@ function parseLatestYml(yml) {
 	return { version, filePath, sha512, releaseDate };
 }
 
-function releaseAssetUrl(fileName) {
-	return `https://github.com/${REPO}/releases/download/${STABLE_TAG}/${encodeURIComponent(fileName)}`;
+function releaseAssetUrl(fileName, tag = STABLE_TAG) {
+	return `https://github.com/${REPO}/releases/download/${tag}/${encodeURIComponent(fileName)}`;
 }
 
 async function fetchRemoteBuildInfo() {
 	try {
 		return await fetchJson(releaseAssetUrl("build-info.json"));
 	} catch (_error) {
-		// Fallback: latest release asset (when tag was force-moved but CDN lags)
-		const api = `https://api.github.com/repos/${REPO}/releases/tags/${STABLE_TAG}`;
+		const api = `https://api.github.com/repos/${REPO}/releases/latest`;
 		const release = await fetchJson(api);
+		const tag = String(release.tag_name || STABLE_TAG);
 		const asset = (release.assets || []).find((a) => a.name === "build-info.json");
-		if (!asset?.browser_download_url) throw new Error("build-info.json missing on stable release");
-		return fetchJson(asset.browser_download_url);
+		if (asset?.browser_download_url) {
+			const info = await fetchJson(asset.browser_download_url);
+			return { ...info, _tag: tag };
+		}
+		const byTag = await fetchJson(`https://api.github.com/repos/${REPO}/releases/tags/${STABLE_TAG}`);
+		const tagged = (byTag.assets || []).find((a) => a.name === "build-info.json");
+		if (!tagged?.browser_download_url) throw new Error("build-info.json missing on stable release");
+		const info = await fetchJson(tagged.browser_download_url);
+		return { ...info, _tag: STABLE_TAG };
 	}
 }
 
-function setupAutoUpdaterFallback() {
-	// Keep electron-updater configured for feeds that use rising semver if ever requested.
-	autoUpdater.autoDownload = false;
-	autoUpdater.autoInstallOnAppQuit = false;
-	autoUpdater.allowDowngrade = false;
-	autoUpdater.allowPrerelease = false;
+function defaultInstallerName() {
+	if (process.platform === "darwin") {
+		return process.arch === "arm64"
+			? `CursoDown_Setup-v${STABLE_VERSION}_mac-arm64.dmg`
+			: `CursoDown_Setup-v${STABLE_VERSION}_mac-x64.dmg`;
+	}
+	if (process.platform === "linux") {
+		return `CursoDown_Setup-v${STABLE_VERSION}_linux-x86_64.AppImage`;
+	}
+	return `CursoDown_Setup-v${STABLE_VERSION}_win-x64.exe`;
 }
 
 async function checkForUpdates({ silent = false } = {}) {
-	lastCheckSilent = Boolean(silent);
 	if (!app.isPackaged) {
 		setState({
 			phase: "not-available",
@@ -220,26 +255,31 @@ async function checkForUpdates({ silent = false } = {}) {
 	try {
 		const local = loadLocalBuildInfo();
 		const localBuildId = Number(local.buildId) || 0;
+		const localVersion = app.getVersion();
 		const remote = await fetchRemoteBuildInfo();
 		const remoteBuildId = Number(remote.buildId) || 0;
+		const remoteVersion = String(remote.stableVersion || STABLE_VERSION);
+		const remoteTag = String(remote._tag || STABLE_TAG);
 
-		if (remoteBuildId > localBuildId) {
+		const newerSemver = cmpSemver(remoteVersion, localVersion) > 0;
+		const newerBuild = remoteBuildId > localBuildId;
+
+		if (newerSemver || newerBuild) {
 			checking = false;
 			pendingInstallerUrl = null;
 			try {
-				const yml = await fetchText(releaseAssetUrl("latest.yml"));
+				const yml = await fetchText(releaseAssetUrl("latest.yml", remoteTag));
 				const parsed = parseLatestYml(yml);
 				if (parsed.filePath) {
-					pendingInstallerUrl = releaseAssetUrl(parsed.filePath);
+					pendingInstallerUrl = releaseAssetUrl(parsed.filePath, remoteTag);
 				}
 			} catch (_ymlError) {
-				// Windows Setup name is stable for v1.0.3
-				pendingInstallerUrl = releaseAssetUrl("CursoDown_Setup-v1.0.3_win-x64.exe");
+				pendingInstallerUrl = releaseAssetUrl(defaultInstallerName(), remoteTag);
 			}
 
 			setState({
 				phase: "available",
-				availableVersion: String(remote.stableVersion || app.getVersion()),
+				availableVersion: remoteVersion,
 				remoteBuildId,
 				buildId: localBuildId,
 				releaseNotes: remote.releasedAt ? `build ${remoteBuildId}` : null,
@@ -331,10 +371,6 @@ function registerAutoUpdate(options) {
 
 	const local = loadLocalBuildInfo();
 	state.buildId = Number(local.buildId) || 0;
-
-	if (app.isPackaged) {
-		setupAutoUpdaterFallback();
-	}
 
 	ipcMain.handle("updates:get-status", () => snapshot());
 	ipcMain.handle("updates:check", async (_event, payload = {}) => {

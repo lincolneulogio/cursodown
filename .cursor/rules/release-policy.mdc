@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Releases CursoDown
 
-- Release estable actual: **`v1.0.3`** (Latest). Version en `package.json`: **`1.0.3`**.
+- Release estable actual: **`v1.0.4`** (Latest). Version en `package.json`: **`1.0.4`**.
 - **NO** crear tags/releases nuevos ni drafts intermedios salvo que el usuario lo pida.
 - Commits a `main` estan bien; publicar instaladores solo cuando el usuario diga (release / publica / tag).
 - Al publicar: actualizar el **mismo** tag estable (force) y regenerar artefactos; no abrir otro numero de version sin pedirlo.
