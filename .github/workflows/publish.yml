@@ -130,23 +130,26 @@ jobs:
       - name: Undraft release when assets are ready
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
-          # Draft releases often 404 on GET /releases/tags/{tag}; use `gh release view`.
+          # No checkout in this job: pass --repo (gh release view needs it).
+          # Prefer gh release view over GET /releases/tags/{tag} (404 on drafts).
           TAG="${{ steps.tag.outputs.name }}"
+          REPO="${{ github.repository }}"
           for i in 1 2 3 4 5 6 8; do
-            COUNT=$(gh release view "${TAG}" --json assets --jq '.assets | length' || echo 0)
-            HAS_YML=$(gh release view "${TAG}" --json assets --jq '[.assets[].name] | map(select(. == "latest.yml")) | length' || echo 0)
+            COUNT=$(gh release view "${TAG}" --repo "${REPO}" --json assets --jq '.assets | length' || echo 0)
+            HAS_YML=$(gh release view "${TAG}" --repo "${REPO}" --json assets --jq '[.assets[].name] | map(select(. == "latest.yml")) | length' || echo 0)
             echo "Assets=${COUNT} latest.yml=${HAS_YML}"
             if [ "${COUNT}" -ge 10 ] && [ "${HAS_YML}" != "0" ]; then
               break
             fi
             sleep 20
           done
-          HAS_YML=$(gh release view "${TAG}" --json assets --jq '[.assets[].name] | map(select(. == "latest.yml")) | length' || echo 0)
+          HAS_YML=$(gh release view "${TAG}" --repo "${REPO}" --json assets --jq '[.assets[].name] | map(select(. == "latest.yml")) | length' || echo 0)
           if [ "${HAS_YML}" = "0" ]; then
             echo "latest.yml still missing on ${TAG}"
             exit 1
           fi
-          gh release edit "${TAG}" --draft=false --latest
+          gh release edit "${TAG}" --repo "${REPO}" --draft=false --latest
           echo "Release ${TAG} is now public (latest)."
