@@ -79,6 +79,51 @@ npm run dev            # Vite HMR + Electron
 | `npm run typecheck:ui` | Typecheck del renderer |
 | `npm run build` | Genera instaladores con electron-builder |
 
+## User Installation
+
+To install a published version of CursoDown:
+
+1. Go to the [Releases](https://github.com/lincolneulogio/cursodown/releases) page.
+2. Download the installer available for your operating system.
+3. Run the installer and follow the installation instructions.
+
+## Authentication
+
+CursoDown supports:
+
+- Udemy account
+- Udemy Business account
+- Access Token
+
+Use the authentication method available in your installation.
+
+## DRM Limitations
+
+CursoDown does not break or remove DRM.
+
+Videos protected by DRM are skipped and are not downloaded.
+
+## Frequently Asked Questions
+
+### Where can I download CursoDown?
+
+Published versions are available on the [Releases](https://github.com/lincolneulogio/cursodown/releases) page.
+
+### Does CursoDown support Udemy Business?
+
+Yes. CursoDown supports authentication with a Udemy Business account.
+
+### Can I use an Access Token?
+
+Yes. CursoDown supports authentication using an Access Token.
+
+### Does CursoDown download DRM-protected videos?
+
+No. DRM-protected videos are skipped and are not downloaded.
+
+
+
+
 ## Releases e instaladores
 
 Los releases se publican automáticamente al crear un tag `v*`:
