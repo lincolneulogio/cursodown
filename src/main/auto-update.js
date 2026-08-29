@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Auto-update for the current stable release (v1.0.4).
+ * Auto-update for the current stable release (v1.0.5).
  * Uses Node http(s) only — Electron 22 has no net.fetch.
  * Detects updates via semver and/or buildId in build-info.json.
  */
@@ -14,8 +14,8 @@ const https = require("https");
 const path = require("path");
 const { URL } = require("url");
 
-const STABLE_TAG = "v1.0.4";
-const STABLE_VERSION = "1.0.4";
+const STABLE_TAG = "v1.0.5";
+const STABLE_VERSION = "1.0.5";
 const REPO = "lincolneulogio/cursodown";
 
 /** @typedef {"idle"|"checking"|"available"|"not-available"|"downloading"|"downloaded"|"error"} UpdatePhase */

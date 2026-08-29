@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag estable a publicar (por defecto v1.0.4)"
+        description: "Tag estable a publicar (por defecto v1.0.5)"
         required: true
-        default: "v1.0.4"
+        default: "v1.0.5"
 
 permissions:
   contents: write
@@ -46,7 +46,7 @@ jobs:
           node <<'NODE'
           const fs = require("fs");
           const info = {
-            stableVersion: "1.0.4",
+            stableVersion: "1.0.5",
             buildId: Number(process.env.GITHUB_RUN_NUMBER) || Date.now(),
             releasedAt: new Date().toISOString(),
             gitSha: process.env.GITHUB_SHA || null,
