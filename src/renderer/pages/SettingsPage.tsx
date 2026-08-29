@@ -226,6 +226,33 @@ export function SettingsPage({ onBusy, onAppearanceChange }: SettingsPageProps) 
 						label={t("Check for a new version on startup")}
 						onChange={(v) => updateDownload("checkNewVersion", v)}
 					/>
+					<div className="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onClick={() => {
+								const api = getUdeler();
+								if (!api?.updates) return;
+								onBusy(true, t("Checking for updates"));
+								void api.updates
+									.check({ silent: false })
+									.then((status) => {
+										if (status.phase === "not-available") {
+											api.notify.show(t("Updates"), t("You are on the latest version"));
+										} else if (status.phase === "error" && status.error) {
+											api.dialog.showErrorBox(t("Updates"), status.error);
+										}
+									})
+									.finally(() => onBusy(false));
+							}}
+							className="rounded-lg border border-ud-border px-3 py-1.5 text-xs hover:bg-ud-muted"
+						>
+							{t("Check for updates now")}
+						</button>
+						<span className="text-xs text-ud-text-muted">
+							v{getUdeler()?.env.appVersion || ""}
+							{getUdeler()?.env.isPackage ? "" : ` (${t("Dev mode — updates disabled")})`}
+						</span>
+					</div>
 					<Toggle
 						checked={form.theme === "dark"}
 						label={t("Dark mode")}

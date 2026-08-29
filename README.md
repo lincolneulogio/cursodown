@@ -81,13 +81,27 @@ npm run dev            # Vite HMR + Electron
 
 ## Releases e instaladores
 
-Versión estable actual: **v1.0.0** (no se crean tags intermedios; se actualiza el mismo release).
+Versión actual en desarrollo: ver `package.json` (p. ej. **1.0.1**).
 
-Los instaladores se regeneran al empujar el tag `v1.0.0` o con **Actions → Publish → Run workflow**:
+### Auto-actualización
+La app empaquetada (NSIS Setup) usa `electron-updater` contra GitHub Releases:
+1. Sube la versión en `package.json` (`1.0.1` → `1.0.2`, etc.)
+2. Publica el tag `vX.Y.Z` (dispara **Publish**)
+3. Quien ya tenga una build con auto-update verá el aviso y podrá descargar/instalar sin ir a la web
+
+Notas:
+- Hace falta **subir la versión** en cada release; republicar el mismo número no dispara update.
+- El primer update automático requiere haber instalado al menos una build que ya incluya el updater.
+- En desarrollo (`npm start` / `--developer`) los updates están desactivados.
+- Firma de código en Windows mejora la experiencia (opcional). Ver [electron-builder code signing](https://www.electron.build/code-signing).
+
+Los instaladores se regeneran al empujar un tag `v*` o con **Actions → Publish → Run workflow**:
 
 ```bash
-git tag -f v1.0.0
-git push origin v1.0.0 --force
+# Ejemplo siguiente release
+# 1) bump version en package.json
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 Eso dispara el workflow **Publish**, que genera paquetes en:
@@ -98,9 +112,7 @@ Eso dispara el workflow **Publish**, que genera paquetes en:
 | macOS | DMG / ZIP (x64 y arm64) |
 | Linux | AppImage, deb, rpm |
 
-Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.0)
-
-> La firma de código (auto-update) requiere configuración propia. Ver [electron-builder code signing](https://www.electron.build/code-signing).
+Descargas: [Releases](https://github.com/lincolneulogio/cursodown/releases)
 
 ## CI / CD
 

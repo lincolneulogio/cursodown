@@ -137,6 +137,11 @@ app.whenReady().then(() => {
 		}
 	});
 
+	const { registerAutoUpdate } = require("./auto-update");
+	registerAutoUpdate({
+		getMainWindow: () => mainWindow,
+	});
+
 	createWindow();
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();

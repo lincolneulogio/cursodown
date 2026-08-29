@@ -141,6 +141,25 @@ export interface IntegrityReport {
 
 export type PlannerSelectMode = "all" | "videos" | "missing" | "new";
 
+export type UpdatePhase =
+	| "idle"
+	| "checking"
+	| "available"
+	| "not-available"
+	| "downloading"
+	| "downloaded"
+	| "error";
+
+export interface UpdateStatus {
+	phase: UpdatePhase;
+	currentVersion: string;
+	availableVersion: string | null;
+	releaseNotes: string | null;
+	percent: number;
+	error: string | null;
+	packaged: boolean;
+}
+
 export interface UdelerBridge {
 	versions: { electron: string; chrome: string; node: string };
 	env: {
@@ -271,6 +290,13 @@ export interface UdelerBridge {
 	app: {
 		quit: () => void;
 		onSaveDownloads: (cb: () => void) => () => void;
+	};
+	updates: {
+		getStatus: () => Promise<UpdateStatus>;
+		check: (options?: { silent?: boolean }) => Promise<UpdateStatus>;
+		download: () => Promise<UpdateStatus>;
+		install: () => Promise<{ ok: boolean; reason?: string }>;
+		onState: (handler: (status: UpdateStatus) => void) => () => void;
 	};
 	logs: {
 		list: (filter?: {

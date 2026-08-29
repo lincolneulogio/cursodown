@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import type { NavSection, SessionUser } from "../shared/udeler.d.ts";
+import type { NavSection, SessionUser, UpdateStatus } from "../shared/udeler.d.ts";
 import { BusyOverlay } from "./components/BusyOverlay";
 import { Sidebar } from "./components/Sidebar";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { getUdeler } from "./hooks/useUdeler";
 import { useI18n } from "./hooks/useI18n";
 import { AboutPage } from "./pages/AboutPage";
@@ -19,6 +20,16 @@ interface QueueStatus {
 	pending: number;
 	concurrency: number;
 }
+
+const IDLE_UPDATE: UpdateStatus = {
+	phase: "idle",
+	currentVersion: "",
+	availableVersion: null,
+	releaseNotes: null,
+	percent: 0,
+	error: null,
+	packaged: false,
+};
 
 function applyAppearanceFromSettings() {
 	const api = getUdeler();
@@ -47,6 +58,8 @@ export default function App() {
 	const [busy, setBusy] = useState(false);
 	const [busyMessage, setBusyMessage] = useState<string | undefined>();
 	const [shortcutsOpen, setShortcutsOpen] = useState(false);
+	const [updateStatus, setUpdateStatus] = useState<UpdateStatus>(IDLE_UPDATE);
+	const [updateDismissed, setUpdateDismissed] = useState(false);
 	const [queue, setQueue] = useState<QueueStatus>({
 		running: 0,
 		pending: 0,
@@ -99,6 +112,17 @@ export default function App() {
 			api.downloads.saveHistory();
 		});
 
+		const unsubUpdates = api.updates?.onState?.((status) => {
+			setUpdateStatus(status);
+			if (status.phase === "available" || status.phase === "downloaded") {
+				setUpdateDismissed(false);
+			}
+		});
+
+		void api.updates?.getStatus?.().then((status) => {
+			if (!cancelled) setUpdateStatus(status);
+		});
+
 		const restored = api.downloads.restoreQueue?.();
 		if (restored && restored.restored > 0) {
 			refreshQueue();
@@ -107,8 +131,22 @@ export default function App() {
 		return () => {
 			cancelled = true;
 			unsubSave();
+			unsubUpdates?.();
 		};
 	}, [onBusy, refreshQueue, t]);
+
+	useEffect(() => {
+		const api = getUdeler();
+		if (!api?.updates || !api.env.isPackage) return;
+		const enabled = api.settings.getSnapshot()?.download?.checkNewVersion !== false;
+		if (!enabled) return;
+
+		const timer = window.setTimeout(() => {
+			void api.updates.check({ silent: true });
+		}, 4000);
+
+		return () => window.clearTimeout(timer);
+	}, [view]);
 
 	useEffect(() => {
 		if (view !== "dashboard") return;
@@ -166,6 +204,13 @@ export default function App() {
 		applyAppearanceFromSettings();
 	};
 
+	const showUpdateBanner =
+		!updateDismissed &&
+		(updateStatus.phase === "available" ||
+			updateStatus.phase === "downloading" ||
+			updateStatus.phase === "downloaded" ||
+			(updateStatus.phase === "error" && Boolean(updateStatus.error)));
+
 	if (view === "boot") {
 		return <BusyOverlay visible message={t("Loading")} />;
 	}
@@ -173,6 +218,14 @@ export default function App() {
 	if (view === "login") {
 		return (
 			<>
+				{showUpdateBanner ? (
+					<UpdateBanner
+						status={updateStatus}
+						onDownload={() => void getUdeler()?.updates.download()}
+						onInstall={() => void getUdeler()?.updates.install()}
+						onDismiss={() => setUpdateDismissed(true)}
+					/>
+				) : null}
 				<LoginPage onLoggedIn={handleLoggedIn} onBusy={onBusy} />
 				<BusyOverlay visible={busy} message={busyMessage} />
 			</>
@@ -180,31 +233,41 @@ export default function App() {
 	}
 
 	return (
-		<div className="flex h-full min-h-0 bg-ud-bg text-ud-text">
-			<Sidebar
-				active={section}
-				user={user}
-				queue={queue}
-				onNavigate={setSection}
-				onLogout={handleLogout}
-			/>
-			<main className="ud-main min-h-0 flex-1 overflow-y-auto">
-				{section === "courses" && (
-					<CoursesPage onBusy={onBusy} onQueueChange={refreshQueue} />
-				)}
-				{section === "library" && <LibraryPage onBusy={onBusy} />}
-				{section === "dashboard" && (
-					<DashboardPage onOpenLibrary={() => setSection("library")} />
-				)}
-				{section === "settings" && (
-					<SettingsPage
-						onBusy={onBusy}
-						onAppearanceChange={applyAppearanceFromSettings}
-					/>
-				)}
-				{section === "logger" && <LoggerPage />}
-				{section === "about" && <AboutPage />}
-			</main>
+		<div className="flex h-full min-h-0 flex-col bg-ud-bg text-ud-text">
+			{showUpdateBanner ? (
+				<UpdateBanner
+					status={updateStatus}
+					onDownload={() => void getUdeler()?.updates.download()}
+					onInstall={() => void getUdeler()?.updates.install()}
+					onDismiss={() => setUpdateDismissed(true)}
+				/>
+			) : null}
+			<div className="flex min-h-0 flex-1">
+				<Sidebar
+					active={section}
+					user={user}
+					queue={queue}
+					onNavigate={setSection}
+					onLogout={handleLogout}
+				/>
+				<main className="ud-main min-h-0 flex-1 overflow-y-auto">
+					{section === "courses" && (
+						<CoursesPage onBusy={onBusy} onQueueChange={refreshQueue} />
+					)}
+					{section === "library" && <LibraryPage onBusy={onBusy} />}
+					{section === "dashboard" && (
+						<DashboardPage onOpenLibrary={() => setSection("library")} />
+					)}
+					{section === "settings" && (
+						<SettingsPage
+							onBusy={onBusy}
+							onAppearanceChange={applyAppearanceFromSettings}
+						/>
+					)}
+					{section === "logger" && <LoggerPage />}
+					{section === "about" && <AboutPage />}
+				</main>
+			</div>
 			<BusyOverlay visible={busy} message={busyMessage} />
 
 			{shortcutsOpen ? (

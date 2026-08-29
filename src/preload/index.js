@@ -873,6 +873,23 @@ const udelerApi = {
 			return () => ipcRenderer.removeListener("saveDownloads", listener);
 		},
 	},
+	updates: {
+		getStatus: () => ipcRenderer.invoke("updates:get-status"),
+		check: (options) => ipcRenderer.invoke("updates:check", options || {}),
+		download: () => ipcRenderer.invoke("updates:download"),
+		install: () => ipcRenderer.invoke("updates:install"),
+		onState: (handler) => {
+			const listener = (_event, payload) => {
+				try {
+					handler(payload);
+				} catch (error) {
+					console.error("updates.onState", error);
+				}
+			};
+			ipcRenderer.on("updates:state", listener);
+			return () => ipcRenderer.removeListener("updates:state", listener);
+		},
+	},
 	logs: {
 		list: (filter = {}) => {
 			let items = logs.slice();
