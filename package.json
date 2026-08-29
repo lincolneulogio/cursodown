@@ -1,7 +1,7 @@
 {
   "name": "cursodown",
   "productName": "CursoDown",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Descargador de cursos de Udemy para escritorio.",
   "main": "main.js",
   "type": "commonjs",
@@ -74,9 +74,6 @@
     "productName": "CursoDown",
     "copyright": "Copyright © 2017 - 2026 | ${author}",
     "artifactName": "${productName}_Setup-v${version}_${os}-${arch}.${ext}",
-    "portable": {
-      "artifactName": "${productName}_Portable-v${version}_${os}-${arch}.${ext}"
-    },
     "publish": [
       {
         "provider": "github",
@@ -103,24 +100,61 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CursoDown",
+      "uninstallDisplayName": "CursoDown",
+      "artifactName": "${productName}_Setup-v${version}_${os}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}_Portable-v${version}_${os}-${arch}.${ext}"
     },
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
       ]
+    },
+    "dmg": {
+      "artifactName": "${productName}_Setup-v${version}_${os}-${arch}.${ext}"
     },
     "linux": {
       "category": "Utility",
       "maintainer": "Lincol Eulogio Huanca <lincolneulogio@users.noreply.github.com>",
       "target": [
-        "AppImage",
-        "deb",
-        "rpm"
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "rpm",
+          "arch": ["x64"]
+        }
       ]
     }
   }

@@ -1,5 +1,13 @@
 # Change Log
 
+## Version [1.0.2](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.2)
+##### Aug 28, 2026
+
+### Instaladores
+- Windows: Setup NSIS (wizard, acceso directo) + Portable x64
+- macOS: DMG + ZIP (x64 / arm64)
+- Linux: AppImage + deb + rpm (x64)
+
 ## Version [1.0.1](https://github.com/lincolneulogio/cursodown/releases/tag/v1.0.1)
 ##### Aug 28, 2026
 
