@@ -1,0 +1,68 @@
+name: "🐛 Bug report"
+description: Report errors or unexpected behavior
+labels:
+  - possible-bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ Before opening a new issue, please make sure to [search for existing issues](./issues) to avoid duplicates.
+
+  - type: input
+    attributes:
+      label: 🔢 App Version
+      description: Check the version shown in the window title (e.g., 1.11.2)
+      placeholder: "e.g., 1.11.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🧾 Account Type
+      description: What type of Udemy account are you using?
+      multiple: false
+      options:
+        - Business
+        - Personal
+        - Subscriber
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🔁 Steps to Reproduce
+      description: Please describe the exact steps to reproduce the issue. Screenshots and logs are extremely helpful.
+      placeholder: |
+        Example:
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error message or unexpected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ✔️ Expected Behavior
+      placeholder: Describe what you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ❌ Actual Behavior (Optional)
+      placeholder: Describe what actually happened, including error messages if any.
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: 🔍 Additional Context
+      description: Add any other relevant details (e.g., OS, browser, language, screenshots).
+      placeholder: |
+        OS: Windows 11
+        Language: en-US
+        Logs: (paste here if available)
+    validations:
+      required: false

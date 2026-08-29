@@ -1,0 +1,111 @@
+{
+  "name": "cursodown",
+  "productName": "CursoDown",
+  "version": "1.14.0",
+  "description": "Descargador de cursos de Udemy para escritorio.",
+  "main": "main.js",
+  "type": "commonjs",
+  "vars": {
+    "urlHelp": "https://heliomarpm.notion.site/heliomarpm/How-to-get-an-Access-Token-b0ce5f89073c4965b47721197dcb2497",
+    "urlToggles": "https://raw.githubusercontent.com/heliomarpm/feature_toggles/main/udemy-downloader-gui.json",
+    "urlDonate": "https://www.paypal.com/donate?business=KBVHLR7Z9V7B2&no_recurring=0&currency_code=USD"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/heliomarpm/udemy-downloader-gui.git"
+  },
+  "license": "ISC",
+  "author": {
+    "name": "Lincol Eulogio Huanca",
+    "email": "",
+    "url": ""
+  },
+  "scripts": {
+    "dev": "npm run build:core && concurrently -k -n vite,electron -c cyan,magenta \"vite --config vite.config.mjs\" \"wait-on http://127.0.0.1:5173 && electron . --developer\"",
+    "start": "npm run build:core && npm run build:renderer && electron .",
+    "build:core": "tsc -p app/core/tsconfig.json",
+    "build:renderer": "vite build --config vite.config.mjs",
+    "typecheck": "tsc -p app/core/tsconfig.json --noEmit",
+    "typecheck:ui": "tsc -p tsconfig.renderer.json --noEmit",
+    "test": "vitest run --config vitest.config.mjs",
+    "format": "prettier --write \"app/**/*.js\" \"src/**/*.{js,ts,tsx}\"",
+    "postinstall": "electron-builder install-app-deps",
+    "build": "npm run build:core && npm run build:renderer && electron-builder",
+    "build:w32": "electron-builder -w \"--ia32\"",
+    "deploy": "node ./node_modules/gh_deploy/index.js",
+    "build:local": "npm run build && npm run build:w32",
+    "sync:locales": "node ./sync-locales.js"
+  },
+  "dependencies": {
+    "@sentry/electron": "4.24.0",
+    "axios": "^1.7.9",
+    "cookie": "^1.0.2",
+    "mt-files-downloader": "github:FaisalUmair/mt-files-downloader-wrapper",
+    "node-cache": "^5.1.2",
+    "node-vtt-to-srt": "^1.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sanitize-filename": "^1.6.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "electron": "22.3.27",
+    "electron-builder": "^25.1.8",
+    "electron-reload": "^2.0.0-alpha.1",
+    "gh_deploy": "github:heliomarpm/gh_deploy",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11",
+    "wait-on": "^9.1.0"
+  },
+  "build": {
+    "appId": "com.lincol.cursodown",
+    "productName": "CursoDown",
+    "copyright": "Copyright © 2017 - 2026 | ${author}",
+    "artifactName": "${productName}_Setup-v${version}_${os}-${arch}.${ext}",
+    "portable": {
+      "artifactName": "${productName}_Portable-v${version}_${os}-${arch}.${ext}"
+    },
+    "files": [
+      "main.js",
+      "environments.js",
+      "package.json",
+      "src/main/**/*",
+      "src/preload/**/*",
+      "app/core/**/*",
+      "app/helpers/**/*",
+      "app/locale/**/*",
+      "app/assets/images/**/*",
+      "dist/renderer/**/*"
+    ],
+    "directories": {
+      "buildResources": "app/assets/images/build",
+      "output": "dist/installers"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "category": "Utility",
+      "target": [
+        "AppImage",
+        "deb",
+        "freebsd",
+        "rpm"
+      ]
+    }
+  }
+}

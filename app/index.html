@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';">
+
+  <!-- TITULO ADICIONADO VIA INDEX.JS -->
+  <!-- <title>CursoDown | Descargador de cursos Udemy</title> -->
+  <link rel="stylesheet" href="./assets/semantic-ui/css/semantic.min.css" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/theme.css" />
+
+  <script src="./renderer.js"></script>
+</head>
+
+<body>
+  <div id="course-planner" class="ud-overlay" role="dialog" aria-modal="true">
+    <div class="ud-modal">
+      <header>
+        <div>
+          <h3 data-planner-title></h3>
+          <small data-selected-count></small>
+        </div>
+        <label class="ud-toolbar" style="margin:0">
+          <input type="checkbox" data-select-all checked />
+          <span></span>
+        </label>
+      </header>
+      <div class="ud-modal-body">
+        <div class="ud-drm" data-drm-banner>
+          <strong data-drm-percent>0%</strong>
+          <div data-drm-detail></div>
+          <div data-drm-hint></div>
+        </div>
+        <div data-planner-tree></div>
+      </div>
+      <footer>
+        <button type="button" class="ud-btn ud-btn-ghost" data-planner-cancel></button>
+        <button type="button" class="ud-btn ud-btn-primary" data-planner-confirm></button>
+      </footer>
+    </div>
+  </div>
+  <div class="ui basic subtitle modal">
+    <div class="ui icon header">
+      <i class="closed captioning icon"></i>
+      <script>translateWrite("Select Subtitle")</script>
+    </div>
+    <div class="content">
+      <div class="ui fluid selection dropdown">
+        <input type="hidden" name="subtitle" />
+        <i class="dropdown icon"></i>
+        <div class="default text">
+          <script>translateWrite("Subtitle Language")</script>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ui basic update-available modal">
+    <div class="ui icon header">
+      <i class="gift icon"></i>
+      <script>translateWrite("New Update Available")</script>
+    </div>
+    <div class="content">
+      <p>
+        <center>
+          <script>translateWrite("A new version of CursoDown is available. You can download the latest version from github releases page")</script>
+        </center>
+      </p>
+    </div>
+    <div class="actions" style="text-align: center;">
+      <div class="ui red cancel inverted button">
+        <i class="remove icon"></i>
+        <script>translateWrite("Cancel")</script>
+      </div>
+      <div class="ui green ok inverted download-update button">
+        <i class="checkmark icon"></i>
+        <script>translateWrite("Download")</script>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.$ = window.jQuery = require("jquery");
+  </script>
+  <script src="./assets/semantic-ui/js/semantic.min.js"></script>
+
+  <script type="text/javascript">
+    var template = `
+          <div class="ud-login">
+            <div class="ud-login-card">
+              <div class="ud-login-brand">
+                <img src="./assets/images/logo64.png" alt="CursoDown" class="ud-login-logo" />
+                <h1 class="ud-login-title">CursoDown</h1>
+                <p class="ud-login-hint">${translate("Sign in with your enrolled Udemy account")}</p>
+              </div>
+
+              <form class="ud-login-form" action="#" onsubmit="return false;">
+                <p class="ud-login-label">${translate("Choose Login Method")}</p>
+                <label class="ud-check" for="business">
+                  <input type="checkbox" name="business" id="business">
+                  <span>${translate("Udemy Business")}</span>
+                </label>
+                <div id="divsubdomain" class="ud-subdomain" style="display: none">
+                  <input type="text" id="subdomain" name="subdomain" placeholder="${translate("Udemy Business Name")}">
+                  <span>.udemy.com</span>
+                </div>
+              </form>
+
+              <div class="ud-login-actions">
+                <button class="ud-btn ud-btn-primary ud-btn-block" type="button" id="btn-login-udemy">
+                  ${translate("Get Credentials")}
+                </button>
+                <button class="ud-btn ud-btn-secondary ud-btn-block" type="button" id="btn-login-token">
+                  ${translate("Access Token")}
+                </button>
+                <div class="ud-token-panel" id="token-panel" hidden>
+                  <label class="ud-login-label" for="access-token-input">${translate("Access Token")}</label>
+                  <textarea id="access-token-input" rows="4" spellcheck="false" placeholder="${translate("Access Token")}"></textarea>
+                  <button class="ud-btn ud-btn-primary ud-btn-block" type="button" id="btn-login-token-submit">
+                    ${translate("Login")}
+                  </button>
+                </div>
+                <p id="login-status" class="ud-login-status" hidden></p>
+                <a class="how-get-token ud-login-link" href="${pkgVars.urlHelp}">${translate("How to get an Access Token")}</a>
+              </div>
+            </div>
+          </div>
+
+            <div class="ui dashboard">
+            <div class="ui dimmer inverted">
+              <div class="ui big text loader"></div>
+            </div>
+            <div class="ui visible fixed vertical inverted sidebar labeled icon menu left">
+              <a class="active purple courses-sidebar item">
+                <i class="file video icon"></i>
+                ${translate("Courses")}
+              </a>
+              <a class="library-sidebar item">
+                <i class="folder open icon"></i>
+                ${translate("Library")}
+              </a>
+              <a class="settings-sidebar item">
+                <i class="wrench icon"></i>
+                ${translate("Settings")}
+              </a>
+
+              <div class="ud-sidebar-foot">
+                <div class="ud-queue-pill" id="queue-status"></div>
+                <div class="ud-session" id="session-card">
+                  <img id="session-avatar" alt="" />
+                  <div class="ud-session-copy">
+                    <span class="ud-session-name" id="session-name"></span>
+                    <span class="ud-session-email" id="session-email"></span>
+                  </div>
+                </div>
+                <a class="logout-sidebar item">
+                  <i class="power off icon"></i>
+                  ${translate("Logout")}
+                </a>
+              </div>
+            </div>
+
+            <div class="content">
+              <div class="ui courses section">
+                <header class="ud-page-head">
+                  <div>
+                    <h2>${translate("Courses")}</h2>
+                    <p>${translate("Remember, you will only be able to see the courses you are enrolled in")}</p>
+                  </div>
+                </header>
+                <nav class="ud-tabs" role="tablist">
+                  <button type="button" class="ud-tab is-active" data-courses-tab="catalog">${translate("Courses")}</button>
+                  <button type="button" class="ud-tab" data-courses-tab="downloads">${translate("Downloads")}</button>
+                </nav>
+                <div class="js-catalog" data-courses-pane="catalog">
+                  <form class="ui search form ud-search">
+                    <div class="ui fluid search">
+                      <div class="ui fluid icon input">
+                        <input class="prompt" type="text" placeholder="${translate("Search Courses")}">
+                        <i class="search icon"></i>
+                      </div>
+                    </div>
+                  </form>
+                  <div class="ui divided unstackable courses items attached segment"></div>
+                </div>
+                <div class="js-downloads" data-courses-pane="downloads" hidden>
+                  <p class="ud-lib-meta">${translate("Downloads in this session and previous ones")}</p>
+                  <div class="ui divided unstackable courses items attached segment"></div>
+                </div>
+              </div>
+
+              <div class="ui library section">
+                <header class="ud-page-head">
+                  <div>
+                    <h2>${translate("Library")}</h2>
+                    <p>${translate("Courses already saved on this computer")}</p>
+                  </div>
+                </header>
+                <div id="library-grid" class="ud-library"></div>
+              </div>
+
+              <div class="ui settings section">
+                <form class="ui form">
+                  <h5 class="ui top attached  header">
+                    <i class="ui setting icon"></i> ${translate("Application Settings")}
+                  </h5>
+                  <div class="ui attached segment">
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="check-new-version">
+                        <label>${translate("Check for a new version on startup")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="dark-theme">
+                        <label>${translate("Dark mode")}</label>
+                      </div>
+                    </div>
+
+                    <div class="field">
+                      <label>${translate("Language (Requires App Restart)")}</label>
+                      <div class="ui fluid search selection language dropdown">
+                        <input type="hidden" name="language">
+                        <i class="dropdown icon"></i>
+                        <div class="default text"></div>
+                        <div class="menu">
+                          <div class="item" data-value="Español">Español</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="field">
+                      <label>${translate("Default Subtitle for download")}</label>
+                      <div class="ui fluid search selection defaultSubtitle dropdown">
+                        <input type="hidden" name="defaultSubtitle">
+                        <i class="dropdown icon"></i>
+                        <div class="defaultSubtitle text"></div>
+                        <div class="menu">
+                          <div class="item" data-value=""></div>
+                          <div class="item" data-value="Español">Español</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h5 class="ui top attached header">
+                    <i class="ui download icon"></i> ${translate("Download Settings")}
+                  </h5>
+                  <div class="ui attached segment">
+                    <div class="field">
+                      <label>${translate("Download Path")}</label>
+                      <div class="ui action input">
+                        <input type="text" readonly name="downloadpath">
+                        <label class="ui icon button btn-file" onclick="selectDownloadPath()">
+                          <i class="folder icon"></i>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="auto-start-download">
+                        <label>${translate("Start pending downloads at startup")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label>${translate("Simultaneous course downloads")}</label>
+                      <input type="number" min="1" max="3" name="max-concurrent-downloads">
+                    </div>
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="skip-existing-files">
+                        <label>${translate("Skip files that already exist")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="continue-downloading-encrypted">
+                        <label>${translate("Skip lessons Blocked by DRM encryption while downloading")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="enabledownloadstartend">
+                        <label>${translate("Enable Download Start/End")}</label>
+                      </div>
+                    </div>
+                    <div class="two unstackable fields">
+                      <div class="field">
+                        <label>${translate("Download Start")}</label>
+                        <input placeholder="${translate("Start Download at")}" type="number" min="1" name="downloadstart">
+                      </div>
+                      <div class="field">
+                        <label>${translate("Download End")}</label>
+                        <input placeholder="${translate("End Download at")}" type="number" min="1" name="downloadend">
+                      </div>
+                    </div>
+
+                    <div class="ui  divider"></div>
+
+                    <div class="field">
+                      <label>${translate("Video Quality")}</label>
+                      <small style="color:#444;">${translate("Note: When the selected option is not available in the Udemy API, the highest quality available will be downloaded.")} </small>
+                      <div class="ui fluid search selection dropdown">
+                        <input type="hidden" name="videoquality">
+                        <i class="dropdown icon"></i>
+                        <div class="default text"></div>
+                        <div class="menu">
+                          <div class="item" data-value="Auto">${translate("Auto")}</div>
+                          <div class="item" data-value="Highest">${translate("Highest")}</div>
+                          <div class="item" data-value="1080">1080p</div>
+                          <div class="item" data-value="720">720p</div>
+                          <div class="item" data-value="576">576p</div>
+                          <div class="item" data-value="480">480p</div>
+                          <div class="item" data-value="432">432p</div>
+                          <div class="item" data-value="360">360p</div>
+                          <div class="item" data-value="Lowest">${translate("Lowest")}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="field">
+                      <div class="ui slider checkbox">
+                        <input type="radio" name="downloadType" value="0">
+                        <label>${translate("Download Lectures and Attachments")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui slider checkbox">
+                        <input type="radio" name="downloadType" value="1">
+                        <label>${translate("Download only Lectures")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui slider checkbox">
+                        <input type="radio" name="downloadType" value="2">
+                        <label>${translate("Download only Attachments")}</label>
+                      </div>
+                    </div>
+
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="skipsubtitles">
+                        <label>${translate("Skip Subtitles")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="seq-zero-left">
+                        <label>${translate("Enumerate download with zero left")}</label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="ui toggle checkbox">
+                        <input type="checkbox" name="autoretry">
+                        <label>${translate("Auto Retry on Error (Experimental)")}</label>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div class="ui horizontal divider"></div>
+                  <button class="floating-btn" type="submit">
+                    <i class="save outline icon"></i>
+                  </button>
+                </form>
+
+                <details class="ud-details">
+                  <summary>${translate("About")}</summary>
+                  <div class="ui about ud-about">
+                    <div class="ud-about-app">
+                      <img src="./assets/images/logo64.png" alt="CursoDown" />
+                      <div>
+                        <h3>CursoDown</h3>
+                        <p>v${appVersion}</p>
+                      </div>
+                      <button type="button" class="ud-btn ud-btn-secondary check-updates">${translate("Check for updates")}</button>
+                    </div>
+
+                    <article class="ud-about-card">
+                      <p class="ud-about-role">${translate("Product-oriented Full-Stack Developer")}</p>
+                      <h4 class="ud-about-name">Lincol Eulogio Huanca</h4>
+                      <p>${translate("about.bio.1")}</p>
+                      <p>${translate("about.bio.2")}</p>
+                      <p>${translate("about.bio.3")}</p>
+                      <p>${translate("about.bio.4")}</p>
+                      <p>${translate("about.bio.5")}</p>
+
+                      <h5>${translate("Stack")}</h5>
+                      <div class="ud-about-tags">
+                        <span>Next.js</span>
+                        <span>React</span>
+                        <span>TypeScript</span>
+                        <span>Tailwind CSS</span>
+                        <span>Astro</span>
+                        <span>Laravel</span>
+                        <span>PostgreSQL</span>
+                        <span>MySQL</span>
+                        <span>SQL Server</span>
+                        <span>SQLite</span>
+                        <span>Drizzle ORM</span>
+                        <span>Better Auth</span>
+                        <span>Node.js</span>
+                        <span>APIs REST</span>
+                        <span>Figma</span>
+                        <span>Photoshop</span>
+                        <span>CorelDRAW</span>
+                      </div>
+                    </article>
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+      `;
+
+    $("body").prepend(template);
+
+    if (window.Gettings && window.Gettings.language == "Arabic") {
+      $(".ui.dashboard .content")
+        .css("margin-left", "10px")
+        .css("width", "80%");
+    }
+
+    var $languageDropdown = $(".language.dropdown .menu");
+    $.getJSON("locale/meta.json", function (data) {
+      $.each(data, function (key) {
+        $languageDropdown.append(
+          `<div class="item" data-value=${key}>${key}</div>`
+        );
+      });
+    });
+
+    var $defaultSubtitleDropdown = $(".defaultSubtitle.dropdown .menu");
+    $.getJSON("locale/meta.json", function (data) {
+      $.each(data, function (key) {
+        $defaultSubtitleDropdown.append(
+          `<div class="item" data-value=${key}>${key}</div>`
+        );
+      });
+    });
+
+  </script>
+  <script src="./login-screen.js"></script>
+  <script src="./app.js"></script>
+</body>
+
+</html>

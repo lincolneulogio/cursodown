@@ -1,0 +1,34 @@
+{
+	"singleQuote": false,
+	"trailingComma": "es5",
+	"tabWidth": 2,
+	"useTabs": true,
+	"semi": true,
+	"arrowParens": "always",
+	"bracketSpacing": true,
+	"bracketSameLine": false,
+	"importOrder": ["^@core/(.*)$", "^@shared/(.*)$", "^@server/(.*)$", "^@app/(.*)$", "^[./]"],
+	"importOrderSeparation": true,
+	"importOrderCaseInsensitive": false,
+	"importOrderSortAlphabetically": true,
+	"importOrderSortSpecifiers": true,
+	"singleAttributePerLine": false,
+	"embeddedLanguageFormatting": "auto",
+	"htmlWhitespaceSensitivity": "css",
+	"proseWrap": "preserve",
+	"printWidth": 140,
+	"overrides": [
+		{
+			"files": "*.json",
+			"options": {
+				"printWidth": 200
+			}
+		},
+    {
+      "files": ["*.html", "*.css", "legacy/**/*.js"],
+      "options": {
+        "tabWidth": 4
+      }
+    }
+	]
+}

@@ -1,0 +1,84 @@
+name: "🌐 Localization/Translation issue"
+description: Report incorrect or unclear translations in the UI.
+labels:
+  - possible-bug
+  - issue-translation
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, please make sure to [search for existing issues](https://github.com/heliomarpm/udemy-downloader-gui/issues) to avoid duplicates!
+
+  - type: input
+    attributes:
+      label: 🔢 App Version
+      placeholder: "e.g., 1.11.2"
+      description: |
+        You can find the version by hovering over the system tray icon or checking the Settings screen.
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🧩 Section with Translation Issue
+      options:
+        - General
+        - Login
+        - Courses
+        - Downloads
+        - Settings
+        - About
+        # Languages (uncomment to use language-based reporting)
+        # - Bahasa Malaysia
+        # - Deutsch
+        # - Español
+        # - Français
+        # - Indonesia
+        # - Italiano
+        # - Magyar
+        # - Polski
+        # - Português
+        # - Punjabi
+        # - Tiếng Việt
+        # - Türkçe
+        # - Ελληνικά
+        # - Русский
+        # - العربية
+        # - فارسی
+        # - हिंदी
+        # - தமிழ்
+        # - မြန်မာ
+        # - 한국어
+        # - 日本語
+        # - 简体中文
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 🌐 Affected Language
+      placeholder: "e.g., German"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ❌ Incorrect Phrase(s)
+      placeholder: What is currently shown in the app? Include screenshots if possible — they help a lot!
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ✔️ Suggested/Correct Phrase(s)
+      placeholder: What should it say instead?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ℹ️ Why is it incorrect?
+      placeholder: Explain why the current translation is wrong or confusing.
+    validations:
+      required: true

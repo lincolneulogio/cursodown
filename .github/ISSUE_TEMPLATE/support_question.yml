@@ -1,0 +1,33 @@
+name: "🤔 Support or Usage Question"
+description: Ask a question or request usage help.
+labels:
+  - question
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question? You're in the right place! Before submitting, check if it's already answered in:
+        - [Issues](./issues)
+        - [Discussions](./discussions) (if available)
+        - The project's [README](./blob/main/README.md) and documentation
+
+  - type: markdown
+    attributes:
+      value: "⚠️👆 Please read the instructions above before submitting the issue 👆⚠️"
+
+  - type: textarea
+    id: question
+    attributes:
+      label: "Your question"
+      description: Provide as much detail as possible so we can assist you effectively.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Context"
+      description: Share relevant code, configuration, or environment info.
+    validations:
+      required: false
