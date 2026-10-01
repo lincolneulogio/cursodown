@@ -143,3 +143,5 @@ Guías: [CONTRIBUTING](docs/CONTRIBUTING.md) · [SECURITY](docs/SECURITY.md) · 
 [MIT](LICENSE) — ver archivo para detalles de copyright original.
 
 <a href="#top">↑ arriba</a>
+
+Guía de usuario: [instalación, inicio de sesión y preguntas frecuentes](docs/USER_GUIDE.md)
